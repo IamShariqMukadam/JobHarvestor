@@ -1,0 +1,14 @@
+selenium
+undetected-chromedriver
+beautifulsoup4
+requests
+pandas
+openpyxl
+python-dotenv
+ratelimit
+sentence-transformers
+scikit-learn
+matplotlib
+seaborn
+fake-useragent
+setuptools

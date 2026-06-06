@@ -1,0 +1,1138 @@
+import streamlit as st
+import re                                          
+import streamlit.components.v1 as stc   
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import json, os, time, sys, subprocess, threading
+from collections import Counter
+from io import BytesIO
+from pathlib import Path
+
+from agent.graph import run_agent
+from analysis.gap_analyzer import load_profiles, analyze_gap
+from utils.session_store import load_session, save_session
+from config import CSV_OUTPUT, XLSX_OUTPUT
+
+st.set_page_config(page_title="JobHarvestor", page_icon="🎯",
+                   layout="wide", initial_sidebar_state="expanded")
+
+# ── BACKGROUND SCRAPE FLAGS & CONSTANTS ────────────────────────────────────────
+_BG_RUNNING = "data/.bg_running"
+_BG_DONE    = "data/.bg_done"
+_BG_STOP    = "scraping_stop.flag"
+_BG_PHASE   = "scraping_phase.txt"
+
+# ── STYLES ────────────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* ── Remove Streamlit chrome ─────────────────── */
+header[data-testid="stHeader"],
+div[data-testid="stDecoration"],
+div[data-testid="stToolbar"],
+#MainMenu { display: none !important; }
+.main .block-container { padding-top: 0.3rem !important; }
+            
+/* ── Base ───────────────────────────────────────────────── */
+body, .stApp {
+    background: linear-gradient(135deg,#030912 0%,#071222 50%,#09101f 100%) !important;
+}
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(135deg,#030912 0%,#071222 50%,#09101f 100%) !important;
+}
+.main .block-container {
+    padding-top:1.2rem !important; padding-bottom:2rem !important;
+    padding-left:2.5rem !important; padding-right:2.5rem !important;
+    max-width:1500px !important;
+    background:rgba(10,14,20,0.6) !important;
+    backdrop-filter:blur(20px) saturate(160%) !important;
+    -webkit-backdrop-filter:blur(20px) saturate(160%) !important;
+    border:1px solid rgba(46,134,171,0.18) !important;
+    border-radius:20px !important;
+    box-shadow:0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+    margin-top:0.5rem !important;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+section[data-testid="stSidebar"] { padding-top:0 !important; }
+section[data-testid="stSidebar"] > div:first-child { padding-top:0.4rem !important; }
+section[data-testid="stSidebar"] > div > div[data-testid="stVerticalBlock"] { gap:0.4rem !important; }
+section[data-testid="stSidebar"] > div { background: linear-gradient(180deg,#07111f 0%,#050d18 100%) !important; }
+section[data-testid="stSidebar"] > div { border-right: 1px solid rgba(46,134,171,0.15) !important; }
+
+/* Sidebar brand */
+.sidebar-brand {
+    background: linear-gradient(135deg,#1F4E79 0%,#2E86AB 100%);
+    border-radius:12px; padding:14px 16px; margin-bottom:14px;
+    box-shadow:0 4px 20px rgba(46,134,171,0.4);
+}
+.sidebar-brand-title { font-size:1.25rem; font-weight:900; color:#fff; letter-spacing:-0.5px; }
+.sidebar-brand-sub   { font-size:0.70rem; color:#c0dff0; margin-top:3px; }
+
+/* Sidebar buttons */
+section[data-testid="stSidebar"] .stButton > button {
+    background: rgba(30,40,55,0.8) !important;
+    border: 1px solid rgba(46,134,171,0.25) !important;
+    color: #c9d1d9 !important;
+    border-radius: 8px !important;
+    font-size: 0.78rem !important;
+    transition: all 0.15s ease !important;
+}
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(46,134,171,0.2) !important;
+    border-color: rgba(46,134,171,0.6) !important;
+    color: #fff !important;
+}
+section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    background: linear-gradient(135deg,#1F4E79,#2E86AB) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 14px rgba(46,134,171,0.4) !important;
+}
+section[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg,#2563a8,#3a9dc4) !important;
+    box-shadow: 0 4px 20px rgba(46,134,171,0.6) !important;
+}
+
+/* Sidebar metrics */
+section[data-testid="stSidebar"] [data-testid="stMetric"] {
+    background: rgba(20,30,45,0.6) !important;
+    border: 1px solid rgba(46,134,171,0.2) !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+}
+
+/* ── Page header ──────────────────────────────────────────── */
+.page-header { display:flex; align-items:baseline; gap:10px; margin-bottom:4px; }
+.page-header-logo { font-size:2.1rem; }
+.page-header-title {
+    font-size:2.1rem; font-weight:900; letter-spacing:-1px;
+    background:linear-gradient(90deg,#4da8d4,#82d4f5,#2E86AB);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.page-header-sub {
+    font-size:0.82rem; color:#8b949e; margin-bottom:16px;
+    border-bottom:1px solid rgba(46,134,171,0.18); padding-bottom:12px;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+div[data-testid="stTabs"] > div:first-child {
+    position:sticky !important; top:0 !important; z-index:999 !important;
+    background:rgba(10,14,20,0.9) !important; backdrop-filter:blur(12px) !important;
+    border:1px solid rgba(46,134,171,0.2) !important; border-radius:10px !important;
+    padding:4px 6px !important; margin-bottom:16px !important;
+}
+button[data-baseweb="tab"] {
+    font-size:0.82rem !important; font-weight:600 !important;
+    padding:6px 16px !important; color:#8b949e !important;
+    border-radius:7px !important; background:transparent !important;
+    border:none !important; transition:all .15s ease;
+}
+button[data-baseweb="tab"]:hover { color:#e6edf3 !important; background:rgba(255,255,255,0.06) !important; }
+button[data-baseweb="tab"][aria-selected="true"] {
+    color:#ffffff !important; font-weight:700 !important;
+    background:linear-gradient(135deg,#1F4E79,#2E86AB) !important;
+    box-shadow:0 2px 10px rgba(46,134,171,0.4) !important;
+}
+[data-baseweb="tab-highlight"] { display:none !important; }
+[data-baseweb="tab-border"]    { display:none !important; }
+
+/* ── Chat messages ────────────────────────────────────────── */
+[data-testid="stChatMessage"] {
+    padding: 6px 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    border: none !important;
+}
+/* User message bubble */
+[data-testid="stChatMessageContent"]:has(+ *) {
+    background: rgba(30, 58, 95, 0.5) !important;
+}
+
+/* ── Chat input ───────────────────────────────────────────── */
+[data-testid="stChatInput"] {
+    border: 1px solid rgba(46,134,171,0.35) !important;
+    border-radius: 12px !important;
+    background: rgba(13,17,23,0.9) !important;
+    backdrop-filter: blur(10px) !important;
+}
+[data-testid="stChatInput"]:focus-within {
+    border-color: rgba(46,134,171,0.7) !important;
+    box-shadow: 0 0 0 3px rgba(46,134,171,0.15) !important;
+}
+[data-testid="stChatInputContainer"] {
+    padding: 8px 0 !important;
+}
+
+/* ── Role-change banner ───────────────────────────────────── */
+.role-banner {
+    background:linear-gradient(90deg,rgba(46,134,171,0.12),rgba(31,78,121,0.08));
+    border:1px solid rgba(46,134,171,0.4); border-radius:12px;
+    padding:14px 18px; margin-bottom:12px;
+}
+.role-banner-title { color:#56c1e8; font-weight:700; font-size:0.92rem; }
+
+/* ── Scraping animation card ─────────────────────────────── */
+.scrape-card-outer {
+    padding: 2px;
+    background: linear-gradient(135deg,#1F4E79,#2E86AB,#56c1e8,#1F4E79);
+    background-size: 300% 300%;
+    animation: grad-shift 3s ease infinite;
+    border-radius: 18px;
+    margin: 24px 0 16px;
+}
+.scrape-card-inner {
+    background: linear-gradient(135deg,#070f1c,#0d1828);
+    border-radius: 16px;
+    padding: 40px 24px;
+    text-align: center;
+}
+.scrape-icon { font-size: 2.4rem; margin-bottom: 12px; }
+.scrape-title { font-size: 1.25rem; font-weight: 800; color: #e6edf3; margin-bottom: 8px; }
+.scrape-sub { font-size: 0.82rem; color: #8b949e; line-height: 1.6; }
+.scrape-steps {
+    display: flex; flex-direction: column; gap: 8px;
+    margin: 20px auto; max-width: 320px; text-align: left;
+}
+.scrape-step {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.82rem; color: #8b949e;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.scrape-step.active {
+    color: #56c1e8;
+    background: rgba(46,134,171,0.12);
+    border-color: rgba(46,134,171,0.3);
+}
+
+/* Pulse dots */
+.pulse-row { display:flex; justify-content:center; gap:8px; margin:20px 0 8px; }
+.pulse-dot {
+    width:10px; height:10px; border-radius:50%;
+    background:#2E86AB; display:inline-block;
+    animation: pulse-bounce 1.4s ease-in-out infinite;
+}
+@keyframes pulse-bounce {
+    0%,80%,100% { transform:scale(0.7); opacity:0.4; }
+    40%          { transform:scale(1.3); opacity:1; background:#56c1e8; }
+}
+@keyframes grad-shift {
+    0%   { background-position:0% 50%; }
+    50%  { background-position:100% 50%; }
+    100% { background-position:0% 50%; }
+}
+
+/* Thinking dots (agent) */
+.thinking-dots span {
+    display:inline-block; width:6px; height:6px; border-radius:50%;
+    background:#2E86AB; margin:0 2px;
+    animation:pulse-bounce 1.2s ease-in-out infinite;
+}
+.thinking-dots span:nth-child(2) { animation-delay:0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay:0.4s; }
+
+/* ── Misc ─────────────────────────────────────────────────── */
+.score-high{color:#00C851;font-size:2rem;font-weight:bold}
+.score-medium{color:#FFB347;font-size:2rem;font-weight:bold}
+.score-low{color:#FF4444;font-size:2rem;font-weight:bold}
+.terminal-line{font-family:monospace;font-size:13px;padding:2px 0}
+.t-green{color:#00ff88}.t-blue{color:#4fc3f7}
+.t-yellow{color:#ffd54f}.t-red{color:#ef5350}
+.t-white{color:#ffffff}.t-gray{color:#9e9e9e}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;margin-right:4px}
+.badge-linkedin{background:#0077b5;color:white}
+.badge-naukri{background:#ff6b35;color:white}
+.badge-internshala{background:#11a64a;color:white}
+.badge-status{background:#2d2d2d;color:#ccc}
+
+/* Better expanders */
+[data-testid="stExpander"] {
+    border: 1px solid rgba(46,134,171,0.2) !important;
+    border-radius: 10px !important;
+    background: rgba(13,17,23,0.5) !important;
+}
+[data-testid="stExpander"]:hover {
+    border-color: rgba(46,134,171,0.4) !important;
+}
+
+/* Metrics */
+[data-testid="stMetric"] {
+    background: rgba(20,28,42,0.6) !important;
+    border: 1px solid rgba(46,134,171,0.18) !important;
+    border-radius: 10px !important;
+    padding: 10px 14px !important;
+}
+[data-testid="metric-container"] {
+    background: transparent !important;
+}
+
+/* st.info / st.warning / st.success */
+[data-testid="stAlert"] {
+    border-radius: 10px !important;
+    border-width: 1px !important;
+}
+
+/* ── Patch 4 Color additions ─────────────────────────── */
+/* Gradient title */
+.stApp h1 { 
+    background: linear-gradient(90deg, #fff 40%, #e94560);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+/* Suggestion buttons — colored borders */
+[data-testid="stButton"] > button {
+    border: 1px solid rgba(233,69,96,0.35) !important;
+    background: linear-gradient(135deg,rgba(233,69,96,0.07),rgba(30,58,95,0.15)) !important;
+    color: #ddd !important;
+    transition: all 0.2s;
+}
+[data-testid="stButton"] > button:hover {
+    border-color: #e94560 !important;
+    background: linear-gradient(135deg,rgba(233,69,96,0.18),rgba(30,58,95,0.3)) !important;
+    color: #fff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(233,69,96,0.25);
+}
+/* Active tab — warm accent */
+[data-baseweb="tab"][aria-selected="true"] {
+    border-bottom: 2px solid #e94560 !important;
+    color: #e94560 !important;
+}
+/* Chat input border glow */
+[data-testid="stChatInput"] { 
+    border: 1px solid rgba(233,69,96,0.3) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 0 20px rgba(233,69,96,0.08);
+}
+/* Sidebar accent line */
+section[data-testid="stSidebar"] {
+    border-right: 2px solid rgba(233,69,96,0.25) !important;
+}
+/* Metric value color */
+[data-testid="stMetricValue"] { color: #e94560 !important; }
+</style>
+""", unsafe_allow_html=True)
+
+
+@st.cache_data(ttl=0)
+def load_jobs_df():
+    return pd.read_csv(CSV_OUTPUT)
+
+if "session_loaded" not in st.session_state:
+    saved = load_session()
+    st.session_state.skills_input   = saved.get("skills_input","")
+    st.session_state.target_tier    = saved.get("target_tier","Mid-market")
+    st.session_state.location       = saved.get("location","India")
+    st.session_state.custom_roles   = saved.get("custom_roles",[])
+    st.session_state.jobs_per_plat  = saved.get("jobs_per_platform",50)
+    st.session_state.agent_result   = None
+    st.session_state.session_loaded = True
+
+def persist():
+    save_session({"skills_input":st.session_state.skills_input,
+                  "target_tier":st.session_state.target_tier,
+                  "location":st.session_state.location,
+                  "custom_roles":st.session_state.custom_roles,
+                  "jobs_per_platform":st.session_state.jobs_per_plat})
+
+# ── Sidebar ───────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("""
+<div class="sidebar-brand">
+    <div class="sidebar-brand-title">🎯 JobHarvestor</div>
+    <div class="sidebar-brand-sub">AI Job Market Intelligence Agent</div>
+</div>
+""", unsafe_allow_html=True)
+
+    # ── Live Scraping Tracker & Kill-Switch ──────────────────────
+    if os.path.exists(_BG_RUNNING):
+        phase = "Scraping jobs..."
+        if os.path.exists(_BG_PHASE):
+            try:
+                with open(_BG_PHASE) as f:
+                    phase = f.read().strip()
+            except: pass
+        st.sidebar.markdown(f"""
+        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);
+        border:1px solid #e94560;border-radius:10px;padding:12px;margin:8px 0">
+        <div style="color:#e94560;font-size:11px;font-weight:700;letter-spacing:1px">● LIVE STATUS</div>
+        <div style="color:#fff;font-size:12px;margin-top:4px;font-weight:600">{phase}</div>
+        <div style="color:#888;font-size:11px;margin-top:2px">Target: {st.session_state.get("bg_scrape_role", "Active Scan")}</div>
+        </div>""", unsafe_allow_html=True)
+        
+        if st.sidebar.button("⏹ Stop Scraping", use_container_width=True, type="secondary"):
+            Path(_BG_STOP).touch()
+            for f_path in [_BG_RUNNING, _BG_DONE, _BG_PHASE]:
+                if os.path.exists(f_path): 
+                    try: os.remove(f_path)
+                    except: pass
+            st.session_state.pop("bg_scrape_role", None)
+            st.rerun()
+
+    st.markdown("**Target Roles**")
+    st.caption("Any profession — Data Analyst, Lawyer, Developer...")
+    new_role = st.text_input("Add a role", placeholder="e.g. Flutter Developer")
+    c1,c2 = st.columns(2)
+    with c1:
+        if st.button("➕ Add", use_container_width=True):
+            if new_role.strip() and new_role.strip() not in st.session_state.custom_roles:
+                st.session_state.custom_roles.append(new_role.strip()); persist(); st.rerun()
+    with c2:
+        if st.button("🗑 Clear", use_container_width=True):
+            st.session_state.custom_roles=[]; persist(); st.rerun()
+    for i,r in enumerate(st.session_state.custom_roles):
+        ca,cb=st.columns([4,1])
+        with ca: st.markdown(f"• **{r}**")
+        with cb:
+            if st.button("✕",key=f"del_{i}"):
+                st.session_state.custom_roles.pop(i); persist(); st.rerun()
+    if not st.session_state.custom_roles:
+        st.caption("No roles added yet.")
+    st.divider()
+    jp = st.slider("Jobs per platform (max 100)",10,100,st.session_state.jobs_per_plat,10)
+    if jp != st.session_state.jobs_per_plat:
+        st.session_state.jobs_per_plat=jp; persist()
+    loc = st.text_input("Location",value=st.session_state.location,
+                         placeholder="Mumbai, Bangalore, Remote")
+    if loc != st.session_state.location:
+        st.session_state.location=loc; persist()
+    tier_opts = ["Mid-market","Tier-1","Series A / Startup"]
+    tier_idx  = tier_opts.index(st.session_state.target_tier) \
+                if st.session_state.target_tier in tier_opts else 0
+    tt = st.selectbox("Target Company Tier",tier_opts,index=tier_idx)
+    if tt != st.session_state.target_tier:
+        st.session_state.target_tier=tt; persist()
+    st.markdown("**Your Skills**")
+    si = st.text_area("Skills (comma-separated)",
+                       value=st.session_state.skills_input,
+                       placeholder="Python, SQL, React...",height=90)
+    if si != st.session_state.skills_input:
+        st.session_state.skills_input=si; persist()
+    st.divider()
+    keep_old = st.checkbox("Keep previous scrape data",value=False,
+                            help="Uncheck = fresh start per scrape")
+    st.session_state.keep_old_data = keep_old
+    scrape_btn  = st.button("🔍 Scrape Jobs + Analyze",type="primary",
+                             use_container_width=True,
+                             disabled=len(st.session_state.custom_roles)==0)
+    analyze_btn = st.button("🤖 Run Agent Analysis",use_container_width=True,
+                             disabled=not os.path.exists(CSV_OUTPUT))
+    st.divider()
+    st.markdown("**Data Stats**")
+    try:
+        _s = pd.read_csv(CSV_OUTPUT)
+        st.metric("Jobs",len(_s))
+        st.metric("Platforms",_s["Platform"].nunique())
+        st.metric("Roles",_s["Role Searched"].nunique())
+    except: st.caption("No data yet.")
+    if st.button("🔄 Reset Session"):
+        from utils.session_store import SESSION_FILE
+        if os.path.exists(SESSION_FILE): os.remove(SESSION_FILE)
+        load_jobs_df.clear(); st.rerun()
+
+# ── Page heading ──────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="page-header">
+    <span class="page-header-logo">🎯</span>
+    <span class="page-header-title">JobHarvestor</span>
+</div>
+<div class="page-header-sub">
+    Niche Job Market Intelligence — What the market <em>actually</em> wants vs JD filler
+</div>
+""", unsafe_allow_html=True)
+
+# ── Scrape Pipeline ───────────────────────────────────────────────────────────
+def colorize(line):
+    l = line.strip()
+    if not l: return ""
+    if "✓" in l or "done" in l.lower() or "complete" in l.lower() or "saved" in l.lower():
+        return f'<div class="terminal-line t-green">✔ {l}</div>'
+    elif "✗" in l or "failed" in l.lower() or "error" in l.lower():
+        return f'<div class="terminal-line t-red">✗ {l}</div>'
+    elif l.startswith("[") and "]" in l:
+        tag = l[l.index("[")+1:l.index("]")]
+        rest = l[l.index("]")+1:]
+        color_map = {"Internshala":"t-green","LinkedIn":"t-blue",
+                     "Naukri":"t-yellow","Export":"t-white",
+                     "CSV":"t-green","XLSX":"t-green",
+                     "Filter":"t-yellow","Groq":"t-blue",
+                     "LLM":"t-blue","Embedder":"t-blue",
+                     "Clusterer":"t-yellow","Analyzer":"t-yellow"}
+        c = color_map.get(tag,"t-gray")
+        return f'<div class="terminal-line"><span class="{c}">[{tag}]</span>{rest}</div>'
+    elif l.startswith("="):
+        return f'<div class="terminal-line t-gray">{l}</div>'
+    elif "Page" in l or "Offset" in l or "Total" in l:
+        return f'<div class="terminal-line t-gray" style="padding-left:16px">{l}</div>'
+    else:
+        return f'<div class="terminal-line t-white">{l}</div>'
+
+if scrape_btn and st.session_state.custom_roles:
+    roles  = st.session_state.custom_roles
+    n_jobs = st.session_state.jobs_per_plat
+    loc_v  = st.session_state.location
+    st.markdown(f"### 🚀 Running Pipeline — {len(roles)} role(s) × 3 platforms × {n_jobs} jobs")
+    venv_python = sys.executable
+    PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+    os.makedirs("data",exist_ok=True)
+    with open("data/scrape_config_override.json","w") as f:
+        json.dump({"roles":roles,"max_jobs":n_jobs,
+                   "locations":[l.strip() for l in loc_v.split(",") if l.strip()]},f)
+    import config as _c
+    if not st.session_state.get("keep_old_data",False):
+        for fp in [_c.CSV_OUTPUT,_c.XLSX_OUTPUT]:
+            if os.path.exists(fp): os.remove(fp)
+        load_jobs_df.clear()
+    progress = st.progress(0)
+    progress_text = st.empty()
+    STEPS = [
+        ("main.py",  "🕷️ Scraping Platforms",     10, 45),
+        ("main2.py", "🧠 LLM Skill Extraction",   45, 78),
+        ("main3.py", "🗺️ Embeddings + Clustering", 78, 92),
+        ("main4.py", "📊 Building Profiles",       92,100),
+    ]
+    pipeline_failed = False
+    for cmd, label, p_start, p_end in STEPS:
+        progress.progress(p_start)
+        progress_text.markdown(f"🟢 **{p_start}%** — {label}...")
+        with st.expander(f"{label}", expanded=True):
+            out_container = st.empty()
+            lines = []
+            proc = subprocess.Popen(
+                [venv_python, cmd],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, cwd=PROJECT_DIR, bufsize=1
+            )
+            for line in proc.stdout:
+                l = line.rstrip()
+                if l:
+                    lines.append(colorize(l))
+                    html = "".join(lines[-25:])
+                    out_container.markdown(
+                        f'<div style="background:#070f1c;padding:12px;border-radius:8px;'
+                        f'border:1px solid rgba(46,134,171,0.2);max-height:300px;overflow-y:auto">'
+                        f'{html}</div>', unsafe_allow_html=True)
+            proc.wait()
+        progress.progress(p_end)
+        progress_text.markdown(f"🟢 **{p_end}%** — ✅ {label} done!")
+        if proc.returncode != 0:
+            st.error(f"❌ {label} failed! Check output above.")
+            pipeline_failed = True
+            break
+    if not pipeline_failed:
+        load_jobs_df.clear()
+        st.cache_data.clear()
+        st.session_state.agent_result    = None
+        st.session_state.post_scrape_roles = roles
+        progress_text.markdown("🟢 **100%** — 🎉 All done!")
+        st.success("✅ **Pipeline complete!** Click **Run Agent Analysis** in the sidebar.")
+        time.sleep(7)
+        st.rerun()
+
+# ── Dynamic Phase Writing Background Scraper Engine ───────────────────────────
+def _start_background_scrape(role: str, location: str = "India") -> bool:
+    if os.path.exists(_BG_RUNNING):
+        return False
+    os.makedirs("data", exist_ok=True)
+    if os.path.exists(_BG_DONE): os.remove(_BG_DONE)
+    if os.path.exists(_BG_STOP): os.remove(_BG_STOP)
+        
+    with open("data/scrape_config_override.json", "w") as f:
+        json.dump({"roles": [role], "max_jobs": 30, "locations": [location]}, f)
+    with open(_BG_RUNNING, "w") as f:
+        f.write(role)
+        
+    PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+    runner_code = (
+        f"import subprocess, sys, os\n"
+        f"cwd = {repr(PROJECT_DIR)}\n"
+        f"phases = [\n"
+        f"    ('main.py', '🕷️ Scraping LinkedIn · Naukri · Internshala'),\n"
+        f"    ('main2.py', '🧠 LLM skill extraction (Groq)'),\n"
+        f"    ('main3.py', '🗺️ Embedding & clustering'),\n"
+        f"    ('main4.py', '📊 Building market profiles')\n"
+        f"]\n"
+        f"broken = False\n"
+        f"for script, phase_text in phases:\n"
+        f"    if os.path.exists({repr(_BG_STOP)}): broken = True; break\n"
+        f"    with open({repr(_BG_PHASE)}, 'w') as pf: pf.write(phase_text)\n"
+        f"    r = subprocess.run([sys.executable, script], capture_output=True, cwd=cwd)\n"
+        f"    if r.returncode != 0: broken = True; break\n"
+        f"if not broken and not os.path.exists({repr(_BG_STOP)}):\n"
+        f"    open({repr(_BG_DONE)}, 'w').write('done')\n"
+        f"for f in [{repr(_BG_RUNNING)}, {repr(_BG_PHASE)}, {repr(_BG_STOP)}]:\n"
+        f"    try: os.remove(f)\n"
+        f"    except: pass\n"
+    )
+    with open("data/bg_runner.py", "w") as f:
+        f.write(runner_code)
+    subprocess.Popen([sys.executable, "data/bg_runner.py"],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     cwd=PROJECT_DIR)
+    return True
+
+_KNOWN_ROLES = [
+    "data analyst","data scientist","data engineer","business analyst",
+    "software engineer","software developer","frontend developer",
+    "backend developer","full stack developer","flutter developer",
+    "react developer","angular developer","python developer","java developer",
+    "machine learning engineer","ml engineer","ai engineer","product manager",
+    "ux designer","ui designer","devops engineer","cloud engineer",
+    "qa engineer","mobile developer","ios developer","android developer",
+    "content writer","digital marketer","project manager","blockchain developer",
+    "lawyer","legal associate",
+]
+
+def _detect_role_quick(text: str):
+    tl = text.lower()
+    for r in _KNOWN_ROLES:
+        if r in tl:
+            return r.title()
+    m = re.search(
+        r'\b([a-z]+(?:\s+[a-z]+)?)\s+'
+        r'(developer|analyst|engineer|manager|designer|scientist|architect)\b', tl)
+    if m and m.group(1) not in ("a","the","any","software","i"):
+        return (m.group(1) + " " + m.group(2)).title()
+    m2 = re.search(r'(?:analyze|search|about|find|for)\s+([a-z]+(?:\s+[a-z]+)?)\s+jobs?', tl)
+    if m2:
+        r = m2.group(1).strip()
+        if 1 <= len(r.split()) <= 3:
+            return r.title()
+    return None
+
+# ── FIXED scroll: Smoothly tracks target layout input element ────────────────
+def _scroll_to_bottom():
+    js = """
+    <script>
+    (function() {
+      function scroll() {
+        var el = window.parent.document.querySelector('[data-testid="stChatInput"] textarea');
+        if (el) { el.scrollIntoView({behavior:'smooth', block:'end'}); return; }
+        var msgs = window.parent.document.querySelectorAll('[data-testid="stChatMessage"]');
+        if (msgs.length) msgs[msgs.length-1].scrollIntoView({behavior:'smooth', block:'end'});
+      }
+      scroll();
+      setTimeout(scroll, 80);
+      setTimeout(scroll, 300);
+    })();
+    </script>
+    """
+    stc.html(js, height=0, scrolling=False)
+
+def _extract_skills_from_history(chat_msgs: list) -> list[str]:
+    user_msgs = [m["content"] for m in chat_msgs if m["role"] == "user"]
+    for msg in reversed(user_msgs):
+        if "," in msg and len(msg) < 300:
+            parts = [p.strip() for p in msg.split(",") if p.strip()]
+            if 2 <= len(parts) <= 20:
+                return parts
+    return []
+
+def _render_gap_chart(gap_data: dict):
+    ranked   = dict(gap_data.get("all_ranked", []))
+    priority = gap_data.get("priority_list", [])
+    missing  = set(gap_data.get("missing_required", []))
+    if not priority: return
+    rows = [{"Skill": s, "% in JDs": ranked.get(s, 0),
+             "Type": "🔴 Must Learn" if s in missing else "🟡 Useful"}
+            for s in priority[:12]]
+    df_chart = pd.DataFrame(rows)
+    fig = px.bar(df_chart, x="% in JDs", y="Skill", orientation="h", color="Type",
+                 color_discrete_map={"🔴 Must Learn":"#FF4444","🟡 Useful":"#FFB347"},
+                 title=f"Learning Roadmap — Readiness: {gap_data.get('readiness_score',0)}%",
+                 text="% in JDs")
+    fig.update_traces(texttemplate="%{text}%", textposition="outside")
+    fig.update_layout(height=max(300, len(rows)*35),
+                      yaxis={"categoryorder":"total ascending"},
+                      plot_bgcolor="#070f1c", paper_bgcolor="#070f1c",
+                      font_color="white")
+    st.plotly_chart(fig, use_container_width=True)
+
+# ── Tabs ──────────────────────────────────────────────────────────────────────
+tab1,tab2,tab3,tab4 = st.tabs([
+    "🤖 AI Agent Analysis","📊 Skill Heatmap","🗺️ Cluster Map","💼 Jobs Board"])
+
+# ─── TAB 1 ───────────────────────────────────────────────────────────────────
+with tab1:
+    from agent.graph import run_chat_turn, GREETING
+
+    if "chat_msgs" not in st.session_state:
+        st.session_state.chat_msgs     = []
+        st.session_state.agent_history = []
+
+    if os.path.exists(_BG_DONE):
+        try: os.remove(_BG_DONE)
+        except: pass
+        load_jobs_df.clear(); st.cache_data.clear()
+        _role = st.session_state.pop("bg_scrape_role", "the role")
+        st.session_state.chat_msgs.append({"role":"assistant","content":(
+            f"✅ **Fresh data ready!** I've scraped and processed **{_role}** job listings.\n\n"
+            f"Shall I run the full skill frequency analysis and gap report?"
+        )})
+
+    scraping_active = os.path.exists(_BG_RUNNING)
+    col_chat, col_info = st.columns([3, 1])
+
+    # ── Right panel ───────────────────────────────────────────
+    with col_info:
+        if scraping_active:
+            with open(_BG_RUNNING) as _f:
+                _rr = _f.read().strip()
+            st.markdown(f"""
+<div style="background:rgba(46,134,171,0.1);border:1px solid rgba(46,134,171,0.4);
+border-radius:10px;padding:12px;margin-bottom:12px;text-align:center">
+<div style="color:#56c1e8;font-weight:700;font-size:0.9rem">🔄 Live Scraping</div>
+<div style="color:#8b949e;font-size:0.78rem;margin-top:4px"><b>{_rr}</b></div>
+<div class="pulse-row" style="margin:10px 0 4px">
+<span class="pulse-dot"></span><span class="pulse-dot" style="animation-delay:.2s"></span>
+<span class="pulse-dot" style="animation-delay:.4s"></span>
+</div>
+</div>""", unsafe_allow_html=True)
+
+        st.markdown("#### 💬 Try asking:")
+        SUGGESTIONS = [
+            "Analyze Data Analyst jobs",
+            "What skills does FAANG look for?",
+            "I know Python, SQL, Tableau",
+            "What's trending in ML roles?",
+            "Compare startup vs mid-market",
+        ]
+        for sug in SUGGESTIONS:
+            if st.button(sug, use_container_width=True, key=f"sug_{hash(sug)}",
+                         disabled=scraping_active):
+                st.session_state._pending_input = sug
+                st.rerun()
+
+        st.divider()
+        if st.button("🔄 New Conversation", use_container_width=True):
+            st.session_state.chat_msgs     = []
+            st.session_state.agent_history = []
+            for _flag in [_BG_RUNNING, _BG_DONE, _BG_PHASE, _BG_STOP]:
+                try: os.remove(_flag)
+                except: pass
+            st.rerun()
+
+    # ── Chat area ─────────────────────────────────────────────
+    with col_chat:
+        st.markdown("### 🤖 JobHarvestor Agent")
+        st.caption("Conversational — I ask questions, extract intent, call tools, and build your gap analysis turn by turn.")
+
+        if "_pending_role" in st.session_state:
+            pr = st.session_state["_pending_role"]
+            existing = [r for r in st.session_state.custom_roles if r.lower() != pr.lower()]
+            st.markdown(f"""
+<div class="role-banner">
+<div class="role-banner-title">🔄 New role detected: {pr}</div>
+<div style="color:#8b949e;font-size:0.82rem;margin-top:4px">
+You have <b>{len(existing)}</b> existing role(s). What would you like to do?
+</div></div>""", unsafe_allow_html=True)
+            bc1,bc2,bc3 = st.columns([5,5,2])
+            with bc1:
+                if st.button(f"➕ Keep existing + add **{pr}**", use_container_width=True):
+                    if pr not in st.session_state.custom_roles:
+                        st.session_state.custom_roles.append(pr); persist()
+                    st.session_state["_pending_input"] = st.session_state.pop("_pending_msg","")
+                    del st.session_state["_pending_role"]; st.rerun()
+            with bc2:
+                if st.button(f"🔄 Clear all → focus on **{pr}**", use_container_width=True):
+                    st.session_state.custom_roles = [pr]; persist()
+                    st.session_state.agent_history = []
+                    st.session_state.chat_msgs = []
+                    st.session_state["_pending_input"] = st.session_state.pop("_pending_msg","")
+                    del st.session_state["_pending_role"]; st.rerun()
+            with bc3:
+                if st.button("✕ Cancel", use_container_width=True):
+                    st.session_state.pop("_pending_role",None)
+                    st.session_state.pop("_pending_msg",None); st.rerun()
+            st.stop()
+
+        if not st.session_state.chat_msgs:
+            st.session_state.chat_msgs.append({"role":"assistant","content":GREETING})
+
+        # ── SCRAPING LOCK SCREEN ────────────────────────────────
+        if scraping_active:
+            with open(_BG_RUNNING) as _f:
+                _running_role = _f.read().strip()
+                
+            _live_phase = "Scraping Platform Engine targets..."
+            if os.path.exists(_BG_PHASE):
+                try:
+                    with open(_BG_PHASE) as pf: _live_phase = pf.read().strip()
+                except: pass
+
+            for msg in st.session_state.chat_msgs:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+            st.markdown(f"""
+<div class="scrape-card-outer">
+  <div class="scrape-card-inner">
+    <div class="scrape-icon">🕷️</div>
+    <div class="scrape-title">Processing <em>{_running_role}</em> Market Parameters</div>
+    <div class="scrape-sub">Background task processing engine initialized.</div>
+    <div class="scrape-steps" style="max-width: 420px;">
+      <div class="scrape-step active">⚡ <b>Current Execution Phase:</b><br>{_live_phase}</div>
+    </div>
+    <div class="pulse-row">
+      <span class="pulse-dot"></span>
+      <span class="pulse-dot" style="animation-delay:.2s"></span>
+      <span class="pulse-dot" style="animation-delay:.4s"></span>
+    </div>
+    <div class="scrape-sub" style="color:#4fc3f7;margin-top:6px">
+      UI conversation thread will update upon completion.
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+            st.chat_input("⏳ Scraping execution layout lock — please wait...", disabled=True)
+            time.sleep(4)
+            st.rerun()
+
+        else:
+            # ── NORMAL CONVERSATION CHANNEL ────────────────────────────────
+            for msg in st.session_state.chat_msgs:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+            _scroll_to_bottom()
+
+            pending = st.session_state.pop("_pending_input", None)
+            user_input = st.chat_input("Ask about any role, your skills, the job market...") or pending
+
+            if user_input:
+                with st.chat_message("user"):
+                    st.markdown(user_input)
+                st.session_state.chat_msgs.append({"role":"user","content":user_input})
+
+                # Extract location strings via context scan
+                response_lower = user_input.lower()
+                detected_city = None
+                for city in ["pune", "mumbai", "bangalore", "delhi", "hyderabad", "chennai", "india", "remote"]:
+                    if city in response_lower:
+                        detected_city = city.title()
+                        st.session_state.location = detected_city
+                        persist()
+                        break
+
+                _detected = _detect_role_quick(user_input)
+
+                # Gate 2f: Location compulsion checkpoint
+                if _detected and not detected_city and not st.session_state.get("location"):
+                    st.session_state.chat_msgs.append({
+                        "role": "assistant",
+                        "content": f"Got it! I see you want to look into **{_detected}** positions. Which city or region should I target? (e.g., Pune, Mumbai, Bangalore, India, Remote)"
+                    })
+                    st.rerun()
+
+                _existing = st.session_state.custom_roles
+                _already  = _detected and any(r.lower()==_detected.lower() for r in _existing)
+                if (_detected and _existing and not _already and not os.path.exists(_BG_RUNNING)):
+                    st.session_state.chat_msgs.pop()
+                    st.session_state["_pending_role"] = _detected
+                    st.session_state["_pending_msg"]  = user_input
+                    st.rerun()
+
+                if not os.path.exists(_BG_RUNNING) and _detected:
+                    search_loc = st.session_state.get("location", "India")
+                    _started = _start_background_scrape(_detected, search_loc)
+                    if _started:
+                        st.session_state["bg_scrape_role"] = _detected
+                        if _detected not in st.session_state.custom_roles:
+                            st.session_state.custom_roles.append(_detected); persist()
+                        _ack = (
+                            f"🚀 Got it! I'm kicking off a live scrape for **{_detected}** jobs in **{search_loc}** right now.\n\n"
+                            f"I'll gather from LinkedIn, Naukri & Internshala, parse skill vectors, "
+                            f"and structure clusters. **Chat parameters are frozen** until computation completes."
+                        )
+                        st.session_state.chat_msgs.append({"role":"assistant","content":_ack})
+                        st.rerun()
+
+                # Execute response turn context mapping
+                with st.chat_message("assistant"):
+                    thinking = st.empty()
+                    thinking.markdown(
+                        '<div class="thinking-dots">'
+                        '<span></span><span></span><span></span>'
+                        '</div>', unsafe_allow_html=True)
+                    try:
+                        response_text, updated_history = run_chat_turn(
+                            user_input, st.session_state.agent_history)
+                        st.session_state.agent_history = updated_history
+
+                        gap_data = None
+                        if any(kw in response_text.lower() for kw in
+                               ["readiness score","missing skills","learning roadmap","% of jds"]):
+                            try:
+                                _mentioned = _extract_skills_from_history(st.session_state.chat_msgs)
+                                if _mentioned:
+                                    gap_data = analyze_gap(
+                                        _mentioned, st.session_state.get("target_tier","Mid-market"))
+                            except Exception: pass
+
+                        thinking.markdown(response_text)
+                        if gap_data and gap_data.get("priority_list"):
+                            _render_gap_chart(gap_data)
+
+                    except Exception as e:
+                        err = f"❌ **Agent error:** {e}\n\nCheck validation setup configurations."
+                        thinking.markdown(err)
+                        response_text = err
+
+                st.session_state.chat_msgs.append({"role":"assistant","content":response_text})
+                _scroll_to_bottom()
+                st.rerun()
+
+# ─── TAB 2 ───────────────────────────────────────────────────────────────────
+with tab2:
+    st.markdown("### 📊 Skill Frequency Heatmap")
+    st.caption("What skills actually appear in job descriptions vs boilerplate filler")
+    try:
+        df = load_jobs_df()
+        c1,c2,c3 = st.columns(3)
+        with c1:
+            ra = ["All"]+sorted(df["Role Searched"].dropna().unique().tolist())
+            post = st.session_state.get("post_scrape_roles",[])
+            def_r = post[0] if post and post[0] in ra else "All"
+            sr = st.selectbox("Filter by Role",ra,index=ra.index(def_r),key="hm_role")
+        with c2:
+            pa = ["All"]+sorted(df["Platform"].dropna().unique().tolist())
+            sp = st.selectbox("Filter by Platform",pa,key="hm_plat")
+        with c3:
+            tn = st.slider("Top N skills",10,50,25,key="hm_n")
+        df_f = df.copy()
+        if sr!="All": df_f=df_f[df_f["Role Searched"]==sr]
+        if sp!="All": df_f=df_f[df_f["Platform"]==sp]
+        skills_all = []
+        for s in df_f["Skills Required"].dropna():
+            if str(s) not in ["N/A","nan",""]:
+                skills_all.extend([x.strip() for x in str(s).split(",")])
+        if skills_all:
+            counts = Counter(skills_all)
+            sk_df = pd.DataFrame(counts.most_common(tn),columns=["Skill","Count"])
+            sk_df["% of JDs"] = (sk_df["Count"]/len(df_f)*100).round(1)
+            fig = px.bar(sk_df,x="% of JDs",y="Skill",orientation="h",
+                         color="% of JDs",color_continuous_scale="Blues",
+                         title=f"Top {tn} Skills — {sr} ({len(df_f)} jobs)",
+                         text="% of JDs")
+            fig.update_traces(texttemplate="%{text}%",textposition="outside")
+            fig.update_layout(height=max(400,tn*22),showlegend=False,
+                              yaxis={"categoryorder":"total ascending"},
+                              plot_bgcolor="#070f1c",paper_bgcolor="#070f1c",
+                              font_color="white",coloraxis_showscale=False)
+            st.plotly_chart(fig,use_container_width=True)
+            st.markdown("#### Skill Frequency Table")
+            rows_html = "".join(
+                f"<tr><td style='text-align:center;padding:8px 14px;border-bottom:1px solid #1e2a3a;font-weight:600'>{i}</td>"
+                f"<td style='text-align:center;padding:8px 14px;border-bottom:1px solid #1e2a3a;font-weight:600'>{r['Skill']}</td>"
+                f"<td style='text-align:center;padding:8px 14px;border-bottom:1px solid #1e2a3a;font-weight:600'>{r['Count']}</td>"
+                f"<td style='text-align:center;padding:8px 14px;border-bottom:1px solid #1e2a3a;font-weight:600'>{r['% of JDs']}</td></tr>"
+                for i,(_,r) in enumerate(sk_df.iterrows()))
+            st.markdown(f"""
+<div style="max-height:300px;overflow-y:auto;border:1px solid rgba(46,134,171,0.2);border-radius:10px">
+<table style="width:100%;border-collapse:collapse">
+<thead><tr style="background:rgba(31,78,121,0.4);position:sticky;top:0">
+  <th style="text-align:center;padding:10px 14px;font-weight:700;border-bottom:1px solid rgba(46,134,171,0.3)">#</th>
+  <th style="text-align:center;padding:10px 14px;font-weight:700;border-bottom:1px solid rgba(46,134,171,0.3)">Skill</th>
+  <th style="text-align:center;padding:10px 14px;font-weight:700;border-bottom:1px solid rgba(46,134,171,0.3)">Count</th>
+  <th style="text-align:center;padding:10px 14px;font-weight:700;border-bottom:1px solid rgba(46,134,171,0.3)">% of JDs</th>
+</tr></thead><tbody>{rows_html}</tbody></table></div>
+""", unsafe_allow_html=True)
+            c_dl1,c_dl2 = st.columns(2)
+            with c_dl1:
+                st.download_button("📥 Download CSV",data=sk_df.to_csv(index=False),
+                                   file_name="skill_frequency.csv",mime="text/csv",
+                                   use_container_width=True)
+            with c_dl2:
+                buf2 = BytesIO()
+                with pd.ExcelWriter(buf2,engine="openpyxl") as w:
+                    sk_df.to_excel(w,sheet_name="Skill Frequency",index=False)
+                    df_f.to_excel(w,sheet_name="All Jobs",index=False)
+                buf2.seek(0)
+                st.download_button("📥 Download XLSX",data=buf2.read(),
+                                   file_name="skill_frequency.xlsx",
+                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                   use_container_width=True)
+        else:
+            st.warning("No skill data. Run main2.py to extract skills from JDs.")
+    except FileNotFoundError: st.warning("No data yet. Add roles and scrape.")
+    except Exception as e: st.error(f"Error: {e}")
+
+# ─── TAB 3 ───────────────────────────────────────────────────────────────────
+with tab3:
+    st.markdown("### 🗺️ Job Cluster Map")
+    st.markdown("""
+**What this shows:** Each dot = one job. Similar skill requirements = closer together.
+- **X-axis:** Primary skill grouping (Analyst ←→ Engineering)
+- **Y-axis:** Secondary grouping (Junior ←→ Senior / Tech Stack)
+    """)
+    try:
+        df = load_jobs_df()
+        if "PCA_X" not in df.columns:
+            st.warning("Cluster data not found. Run Scrape Jobs + Analyze to generate it.")
+        else:
+            df["Cluster"] = pd.to_numeric(df["Cluster"],errors="coerce").fillna(0).astype(int)
+            cluster_labels = {}
+            try:
+                for p in load_profiles():
+                    cluster_labels[p["cluster_id"]]=p["label"]
+            except: pass
+            df["Cluster Label"] = df["Cluster"].map(cluster_labels).fillna("Mid-market")
+            c1,c2,c3 = st.columns(3)
+            with c1:
+                co = ["All"]+sorted(df["Cluster Label"].unique().tolist())
+                sc = st.selectbox("Filter by Tier",co)
+            with c2:
+                ro = ["All"]+sorted(df["Role Searched"].dropna().unique().tolist())
+                src = st.selectbox("Filter by Role",ro,key="cm_role")
+            with c3:
+                ac = sorted(df["Company"].dropna().unique().tolist())
+                sel_co = st.multiselect("Highlight Companies",ac,placeholder="Select to highlight...")
+            df_c = df.copy()
+            if sc!="All": df_c=df_c[df_c["Cluster Label"]==sc]
+            if src!="All": df_c=df_c[df_c["Role Searched"]==src]
+            df_c["Highlight"] = df_c["Company"].apply(lambda x: x if x in sel_co else "Other")
+            cc = "Highlight" if sel_co else "Cluster Label"
+            fig = px.scatter(df_c,x="PCA_X",y="PCA_Y",color=cc,
+                             hover_data={"Title":True,"Company":True,"Platform":True,
+                                         "Location":True,"PCA_X":False,"PCA_Y":False},
+                             color_discrete_map={"Tier-1":"#1F4E79",
+                                                 "Series A / Startup":"#E63946",
+                                                 "Mid-market":"#2E86AB"},
+                             title=f"Job Clusters ({len(df_c)} jobs)",
+                             labels={"PCA_X":"Skill Cluster Axis 1 (Web Dev ←→ Backend / Data)",
+                                     "PCA_Y":"Skill Cluster Axis 2 (Junior ←→ Senior)"})
+            fig.update_traces(marker=dict(size=7,opacity=0.75))
+            fig.update_layout(height=520,plot_bgcolor="#070f1c",
+                              paper_bgcolor="#070f1c",font_color="white")
+            st.plotly_chart(fig,use_container_width=True)
+            for label,group in df_c.groupby("Cluster Label"):
+                with st.expander(f"**{label}** — {len(group)} jobs"):
+                    ca2,cb2 = st.columns(2)
+                    with ca2:
+                        st.markdown("**Top Companies:**")
+                        for co,cnt in group["Company"].value_counts().head(8).items():
+                            st.markdown(f"• {co} ({cnt})")
+                    with cb2:
+                        st.markdown("**Top Skills:**")
+                        cs=[]
+                        _bad = {"n/a","nan","null","none",""}
+                        for s in group["Skills Required"].dropna():
+                            if str(s).strip().lower() not in _bad:
+                                cs.extend([x.strip() for x in str(s).split(",")
+                                           if x.strip().lower() not in _bad])
+                        for sk,cnt in Counter(cs).most_common(8):
+                            st.markdown(f"• **{sk}** — {round(cnt/len(group)*100,1)}%")
+    except FileNotFoundError: st.warning("No data yet.")
+    except Exception as e: st.error(f"Error: {e}")
+
+# ─── TAB 4 ───────────────────────────────────────────────────────────────────
+with tab4:
+    st.markdown("### 💼 Jobs Board")
+    PLATFORM_COLORS = {"LinkedIn":"#0077b5","Naukri":"#ff6b35","Internshala":"#11a64a"}
+    STATUS_OPTIONS  = ["To Apply","Applied","Interview","Rejected","Offer","Automate"]
+    STATUS_EMOJI    = {"To Apply":"🔵","Applied":"🟢","Interview":"🟡",
+                       "Rejected":"🔴","Offer":"⭐","Automate":"🤖"}
+    try:
+        df = load_jobs_df()
+        fc1,fc2,fc3 = st.columns(3)
+        with fc1:
+            rlist = ["All"]+sorted(df["Role Searched"].dropna().unique().tolist())
+            post2 = st.session_state.get("post_scrape_roles",[])
+            defr2 = post2[0] if post2 and post2[0] in rlist else "All"
+            rf = st.selectbox("Role",rlist,index=rlist.index(defr2),key="jb_role")
+        with fc2:
+            plist = ["All"]+sorted(df["Platform"].dropna().unique().tolist())
+            pf = st.selectbox("Platform",plist,key="jb_plat")
+        with fc3:
+            sf = st.selectbox("Status",["All"]+STATUS_OPTIONS,key="jb_status")
+        df_j = df.copy()
+        if rf!="All": df_j=df_j[df_j["Role Searched"]==rf]
+        if pf!="All": df_j=df_j[df_j["Platform"]==pf]
+        if sf!="All": df_j=df_j[df_j["Status"]==sf]
+        sc1,sc2,sc3,sc4,sc5,sc6 = st.columns([1,1,1,1,1.5,1.5])
+        with sc1: st.metric("Total",len(df_j))
+        with sc2: st.metric("To Apply",len(df_j[df_j["Status"]=="To Apply"]))
+        with sc3: st.metric("Applied",len(df_j[df_j["Status"]=="Applied"]))
+        with sc4: st.metric("Interview",len(df_j[df_j["Status"]=="Interview"]))
+        with sc5:
+            buf3=BytesIO()
+            with pd.ExcelWriter(buf3,engine="openpyxl") as w:
+                df_j.to_excel(w,sheet_name="Filtered Jobs",index=False)
+                df.to_excel(w,sheet_name="All Jobs",index=False)
+            buf3.seek(0)
+            st.download_button("📥 Export XLSX",data=buf3.read(),
+                               file_name="jobs_export.xlsx",use_container_width=True,
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        with sc6:
+            with st.expander("📤 Upload XLSX / CSV"):
+                up = st.file_uploader("Upload",type=["xlsx","csv"],label_visibility="collapsed")
+                if up:
+                    try:
+                        df_up = pd.read_csv(up) if up.name.endswith(".csv") \
+                                else pd.read_excel(up,sheet_name="All Jobs")
+                        df_up.to_csv(CSV_OUTPUT,index=False)
+                        load_jobs_df.clear(); st.success("Loaded!"); st.rerun()
+                    except Exception as e: st.error(str(e))
+        st.divider()
+        changed = False
+        for loop_i,(_,row) in enumerate(df_j.head(100).iterrows()):
+            ridx = df[df["URL"]==row["URL"]].index.tolist()
+            ridx = ridx[0] if ridx else None
+            plat = str(row.get("Platform",""))
+            pc   = PLATFORM_COLORS.get(plat,"#555")
+            stat = str(row.get("Status","To Apply"))
+            emoji= STATUS_EMOJI.get(stat,"⚪")
+            with st.expander(
+                f"{emoji} **{row.get('Title','N/A')}** · "
+                f"*{row.get('Company','N/A')}* · "
+                f"{row.get('Location','N/A')}"):
+                d1,d2 = st.columns([3,1])
+                with d1:
+                    st.markdown(
+                        f'<span class="badge" style="background:{pc};color:white">{plat}</span>'
+                        f'<span class="badge badge-status">{row.get("Date Posted","N/A")}</span>',
+                        unsafe_allow_html=True)
+                    sk = str(row.get("Skills Required","N/A"))
+                    if sk not in ["N/A","nan",""]:
+                        tags = "".join([
+                            f'<span style="display:inline-block;background:rgba(31,78,121,0.5);'
+                            f'color:#4fc3f7;border-radius:4px;padding:2px 6px;'
+                            f'font-size:11px;margin:2px;border:1px solid rgba(46,134,171,0.3)">{s.strip()}</span>'
+                            for s in sk.split(",")[:8]])
+                        st.markdown(f"**Skills:** {tags}",unsafe_allow_html=True)
+                    e_val = row.get("Experience Required","N/A")
+                    s_val = row.get("Salary","N/A")
+                    st.markdown(f"**Exp:** {e_val} &nbsp;|&nbsp; **Salary:** {s_val}",
+                                unsafe_allow_html=True)
+                    url = str(row.get("URL",""))
+                    if url not in ["N/A","nan",""]:
+                        st.link_button("🔗 Apply Now",url)
+                with d2:
+                    cur_idx = STATUS_OPTIONS.index(stat) if stat in STATUS_OPTIONS else 0
+                    new_s = st.selectbox("Status",STATUS_OPTIONS,index=cur_idx,
+                                         key=f"st_{loop_i}",label_visibility="collapsed")
+                    if new_s!=stat and ridx is not None:
+                        df.at[ridx,"Status"]=new_s; changed=True
+        if changed:
+            df.to_csv(CSV_OUTPUT,index=False)
+            load_jobs_df.clear()
+            try:
+                from openpyxl import load_workbook
+                wb=load_workbook(XLSX_OUTPUT)
+                if "All Jobs" in wb.sheetnames:
+                    ws=wb["All Jobs"]
+                    hdrs=[c.value for c in ws[1]]
+                    if "URL" in hdrs and "Status" in hdrs:
+                        uc=hdrs.index("URL")+1; sc_i=hdrs.index("Status")+1
+                        us=dict(zip(df["URL"],df["Status"]))
+                        for r in ws.iter_rows(min_row=2,max_row=ws.max_row):
+                            if r[uc-1].value in us: r[sc_i-1].value=us[r[uc-1].value]
+                    wb.save(XLSX_OUTPUT)
+            except: pass
+            st.success("✅ Status saved to CSV + Excel")
+    except FileNotFoundError: st.warning("No data yet. Add roles and scrape.")
+    except Exception as e: st.error(f"Error: {e}")

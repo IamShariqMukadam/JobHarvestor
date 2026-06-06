@@ -1,0 +1,11 @@
+cat > .gitignore << 'EOF'
+.env
+data/
+__pycache__/
+*.pyc
+*.pkl
+.venv/
+venv/
+scraping_stop.flag
+scraping_phase.txt
+EOF
