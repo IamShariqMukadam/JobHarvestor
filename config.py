@@ -48,7 +48,9 @@ TARGET_LOCATIONS = [
 # Remote included so you don't miss WFH roles
 # empty = no filter, all locations
 
-BRAVE_PATH = "/snap/bin/brave"
+# BRAVE_PATH = "/snap/bin/brave"
+import os
+BRAVE_PATH = os.getenv("CHROME_PATH", "/usr/bin/chromium-browser")
 
 MAX_JOBS_PER_SEARCH = 50
 

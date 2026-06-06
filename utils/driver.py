@@ -1,10 +1,15 @@
+import os
 import undetected_chromedriver as uc
 from config import BRAVE_PATH
 
 
 def get_driver(headless=False):
     options = uc.ChromeOptions()
-    options.binary_location = BRAVE_PATH
+
+    # Use Brave locally if it exists, else fall back to Chromium (cloud)
+    if os.path.exists(BRAVE_PATH):
+        options.binary_location = BRAVE_PATH
+
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
@@ -23,9 +28,8 @@ def get_driver(headless=False):
 
     driver = uc.Chrome(
         options=options,
-        headless=False,        # let the argument handle it, not UC param
         use_subprocess=True,
-        version_main=148
+        # version_main removed — auto-detects your installed version
     )
 
     return driver
