@@ -16,6 +16,8 @@ streamlit
 torch
 plotly
 langchain
+langchain-groq
+langchain-core
 langgraph
 fastapi
 uvicorn
