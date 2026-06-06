@@ -50,7 +50,7 @@ TARGET_LOCATIONS = [
 
 # BRAVE_PATH = "/snap/bin/brave"
 import os
-BRAVE_PATH = os.getenv("CHROME_PATH", "/usr/bin/chromium-browser")
+BRAVE_PATH = os.getenv("CHROME_PATH", "/usr/bin/chromium")
 
 MAX_JOBS_PER_SEARCH = 50
 
