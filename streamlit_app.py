@@ -250,9 +250,7 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdow
   opacity:.85 !important;transform:translateY(-1px) !important;
 }}
 
-/* ── HIDE SIDEBAR CONTROLS ── */
-[data-testid="collapsedControl"],[data-testid="stSidebarHeader"] button,
-section[data-testid="stSidebar"] button[aria-label="Close sidebar"]{{display:none !important}}
+/* ── SIDEBAR CONTROLS — styled via JS, not hidden ── */
 
 
 
@@ -603,12 +601,14 @@ stc.html("""<script>
   var style = window.parent.document.createElement('style');
   style.id = 'jh-sidebar-style';
   style.textContent = `
+    [data-testid="stSidebarHeader"],
     [data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"] {
       display: flex !important;
       visibility: visible !important;
       opacity: 1 !important;
     }
+    [data-testid="stSidebarHeader"] button,
     [data-testid="stSidebarCollapseButton"] button,
     [data-testid="collapsedControl"] button,
     [data-testid="collapsedControl"] > div {
@@ -616,13 +616,16 @@ stc.html("""<script>
       border: 1px solid rgba(240,192,64,.35) !important;
       color: #F0C040 !important;
       border-radius: 0 10px 10px 0 !important;
-      width: 22px !important;
+      width: 28px !important;
+      min-width: 28px !important;
       transition: background .2s !important;
     }
+    [data-testid="stSidebarHeader"] button:hover,
     [data-testid="stSidebarCollapseButton"] button:hover,
     [data-testid="collapsedControl"] button:hover {
       background: rgba(240,192,64,.3) !important;
     }
+    [data-testid="stSidebarHeader"] svg,
     [data-testid="stSidebarCollapseButton"] svg,
     [data-testid="collapsedControl"] svg {
       fill: #F0C040 !important;
