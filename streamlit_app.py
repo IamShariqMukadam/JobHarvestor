@@ -133,9 +133,10 @@ section[data-testid="stSidebar"]{{background:var(--bg-2) !important;border-right
 section[data-testid="stSidebar"]>div{{background:transparent !important;padding-top:.3rem !important}}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
 /* ── SIDEBAR THEME TOGGLE ── */
-section[data-testid="stSidebar"] [data-testid="stToggle"]{{display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;margin:12px auto 18px !important;width:100% !important}}
-section[data-testid="stSidebar"] [data-testid="stToggle"] label{{transform:scale(1.8);transform-origin:center center;display:flex !important;align-items:center !important;justify-content:center !important;gap:10px !important}}
-section[data-testid="stSidebar"] [data-testid="stToggle"] p{{font-family:var(--f-mono) !important;font-size:.92rem !important;color:var(--tx-m) !important;text-align:center !important}}
+section[data-testid="stSidebar"] .element-container:has(.stToggle){{display:flex !important;justify-content:center !important;width:100% !important;margin:10px 0 16px !important}}
+section[data-testid="stSidebar"] .stToggle{{display:inline-flex !important;justify-content:center !important}}
+section[data-testid="stSidebar"] .stToggle label{{display:inline-flex !important;align-items:center !important;gap:10px !important;zoom:1.65 !important}}
+section[data-testid="stSidebar"] .stToggle p{{font-family:var(--f-mono) !important;font-size:1rem !important;color:var(--tx-m) !important;margin:0 !important}}
 
 
 # /* ── SIDEBAR RADIO THEME TOGGLE — hidden, JS-driven ── */
