@@ -112,14 +112,16 @@ section[data-testid="stSidebar"] .stRadio{{
   display:flex !important;justify-content:center !important;
 }}
 section[data-testid="stSidebar"] .stRadio>div{{
-  flex-direction:row !important;gap:2px !important;background:var(--inp-bg) !important;
-  border:1px solid var(--bd) !important;border-radius:999px !important;padding:3px !important;
+  flex-direction:row !important;gap:2px !important;background:var(--bg-2) !important;
+  border:1px solid var(--bd-s) !important;border-radius:999px !important;padding:3px !important;
   margin-bottom:12px !important;display:inline-flex !important;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.35) !important;
 }}
 section[data-testid="stSidebar"] .stRadio label{{
   border-radius:999px !important;padding:5px 14px !important;font-family:var(--f-mono) !important;
-  font-size:.70rem !important;color:var(--tx-m) !important;cursor:pointer !important;
-  transition:all .16s !important;background:transparent !important;
+  font-size:.70rem !important;color:var(--tx) !important;cursor:pointer !important;
+  transition:all .16s !important;background:var(--bg-3) !important;
+  border:1px solid var(--bd) !important;
   display:flex !important;align-items:center !important;gap:4px !important;
 }}
 section[data-testid="stSidebar"] .stRadio label > div:first-child{{display:none !important}}
@@ -204,7 +206,7 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdow
 }}
 /* Full track — grey */
 [data-testid="stSlider"] div[class*="track"],[data-testid="stSlider"] div[class*="Track"]{{
-  background:var(--bd-s) !important;border-radius:999px !important;
+  background:var(--bd-s) !important;
 }}
 /* Filled portion — accent */
 [data-testid="stSlider"] div[class*="innerTrack"],[data-testid="stSlider"] div[class*="InnerTrack"],
@@ -215,7 +217,7 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdow
 [data-testid="stSlider"] [data-baseweb="slider"]>div>div:first-child{{background:var(--bd-s) !important;border-radius:999px !important}}
 [data-testid="stSlider"] [data-baseweb="slider"]>div>div:first-child>div:first-child{{background:var(--accent) !important;border-radius:999px !important}}
 [data-testid="stSlider"] [data-baseweb="slider"]>div>div:first-child>div:last-child{{background:var(--bd-s) !important;border-radius:999px !important}}
-[data-testid="stSlider"] [data-baseweb="slider"]>div>div:nth-child(2){{background:var(--accent) !important;border-radius:999px !important}}
+# [data-testid="stSlider"] [data-baseweb="slider"]>div>div:nth-child(2){{background:var(--accent) !important;border-radius:999px !important}}
 /* Tick labels (min/max values like "10" and "100") — neutral, NOT accent */
 [data-testid="stSlider"] span{{
   color:var(--tx-m) !important;font-family:var(--f-mono) !important;
