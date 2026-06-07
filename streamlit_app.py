@@ -133,7 +133,9 @@ section[data-testid="stSidebar"]{{background:var(--bg-2) !important;border-right
 section[data-testid="stSidebar"]>div{{background:transparent !important;padding-top:.3rem !important}}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
 /* ── SIDEBAR THEME TOGGLE ── */
-section[data-testid="stSidebar"] .element-container:has(#jh-theme-marker)+.element-container{{height:0 !important;overflow:hidden !important;margin:0 !important;padding:0 !important;}}
+section[data-testid="stSidebar"] [data-testid="stToggle"]{{display:flex !important;justify-content:center !important;margin:8px auto 14px !important;width:100% !important}}
+section[data-testid="stSidebar"] [data-testid="stToggle"] label{{transform:scale(1.4);transform-origin:center;display:flex !important;justify-content:center !important}}
+section[data-testid="stSidebar"] [data-testid="stToggle"] p{{font-family:var(--f-mono) !important;font-size:.72rem !important;color:var(--tx-m) !important}}
 
 
 # /* ── SIDEBAR RADIO THEME TOGGLE — hidden, JS-driven ── */
@@ -233,29 +235,20 @@ section[data-testid="stSidebar"] .element-container:has(#jh-theme-marker)+.eleme
 }}
 
 /* ── SLIDER ── */
-[data-testid="stSlider"]{{--primary-color:var(--accent) !important}}
-[data-testid="stSlider"] [data-baseweb="slider"]{{padding-top:20px !important}}
+/* ── SLIDER — attribute selector catches inline style regardless of class names ── */
 [data-testid="stSlider"] [role="slider"]{{
   width:20px !important;height:20px !important;
   background:var(--accent) !important;border:2px solid var(--bg) !important;
   border-radius:50% !important;
   box-shadow:0 0 0 2px var(--accent),0 0 14px var(--accent-bg) !important;
 }}
-/* Track — scoped inside baseweb slider so it never hits label containers */
-[data-testid="stSlider"] [data-baseweb="slider"] div[class*="track"],
-[data-testid="stSlider"] [data-baseweb="slider"] div[class*="Track"]{{
-  background:var(--bd-s) !important;border-radius:999px !important;overflow:hidden !important;
+[data-testid="stSlider"] [data-baseweb="slider"]{{padding-top:20px !important}}
+[data-testid="stSlider"] div[style*="255, 75, 75"],
+[data-testid="stSlider"] div[style*="255,75,75"],
+[data-testid="stSlider"] div[style*="ff4b4b"],
+[data-testid="stSlider"] div[style*="FF4B4B"]{{
+  background:#F0C040 !important;background-color:#F0C040 !important;
 }}
-/* Fill portion — explicit accent, overrides --primary-color red fallback */
-[data-testid="stSlider"] [data-baseweb="slider"] div[class*="track"]>div:first-child,
-[data-testid="stSlider"] [data-baseweb="slider"] div[class*="Track"]>div:first-child{{
-  background:var(--accent) !important;border-radius:0 !important;
-}}
-/* InnerTrack = the actual fill segment — sibling of track, not child */
-[data-testid="stSlider"] [data-baseweb="slider"] div[class*="nnerTrack"]{{
-  background:var(--accent) !important;border-radius:999px !important;
-}}
-/* Tick labels — target by testid, not span wildcard bleeding into thumb tooltip */
 [data-testid="stSlider"] [data-testid="stTickBarMin"],
 [data-testid="stSlider"] [data-testid="stTickBarMax"]{{
   color:var(--tx-m) !important;font-family:var(--f-mono) !important;
@@ -264,10 +257,6 @@ section[data-testid="stSidebar"] .element-container:has(#jh-theme-marker)+.eleme
 [data-testid="stSlider"] span{{
   color:var(--tx-m) !important;font-family:var(--f-mono) !important;
   background:transparent !important;padding:0 !important;
-}}
-:root {{ --primary: var(--accent) !important; }}
-[data-testid="stSlider"] div[style*="rgb(255, 75, 75)"] {{
-  background: var(--accent) !important;
 }}
 
 /* ── BUTTONS ── */
@@ -775,21 +764,27 @@ stc.html("""<script>
 })();
          
 
-// Fix slider fill color
+// Fix slider fill color — reads raw inline style, uses MutationObserver for instant catch
 (function() {
+  var GOLD = '#F0C040';
+  var RED_RE = /255,?\s*75,?\s*75|[Ff][Ff]4[Bb]4[Bb]/;
   function fixSliders() {
     try {
       var doc = window.parent.document;
-      doc.querySelectorAll('[data-testid="stSlider"] [data-baseweb="slider"] div').forEach(function(d) {
-        var c = window.parent.getComputedStyle(d).backgroundColor;
-        if (c === 'rgb(255, 75, 75)') {
-          d.style.cssText += 'background:#F0C040 !important';
+      doc.querySelectorAll('[data-testid="stSlider"] div').forEach(function(d) {
+        if (RED_RE.test(d.getAttribute('style') || '')) {
+          d.style.setProperty('background', GOLD, 'important');
+          d.style.setProperty('background-color', GOLD, 'important');
         }
       });
     } catch(e) {}
   }
   fixSliders();
-  setInterval(fixSliders, 800);
+  setInterval(fixSliders, 400);
+  try {
+    var obs = new window.parent.MutationObserver(fixSliders);
+    obs.observe(window.parent.document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['style']});
+  } catch(e) {}
 })();
 </script>""", height=0, scrolling=False)
 
@@ -955,41 +950,10 @@ with st.sidebar:
 """, unsafe_allow_html=True)
     # ── Theme toggle ──────────────────────────────────────
     _is_dark = st.session_state.jh_theme == "dark"
-    _pill_bg = "#F0C040"               if _is_dark else "rgba(50,50,50,.6)"
-    _pill_bd = "rgba(240,192,64,.6)"   if _is_dark else "rgba(200,200,200,.3)"
-    _knob_bg = "#080808"               if _is_dark else "#EDE9E0"
-    _knob_l  = "28px"                  if _is_dark else "3px"
-    _tx_col  = "rgba(237,233,224,.7)"  if _is_dark else "rgba(12,12,10,.6)"
-    _icon    = "🌙"                    if _is_dark else "☀️"
-    _lbl     = "Dark"                  if _is_dark else "Light"
-    # Marker anchors the CSS sibling rule that hides the real button below
-    st.markdown('<span id="jh-theme-marker" style="display:none"></span>', unsafe_allow_html=True)
-    # Real button — hidden by CSS, clicked by JS from the iframe below
-    if st.button("JH_TOG", key="jh_theme_btn"):
-        st.session_state.jh_theme = "light" if _is_dark else "dark"
+    _toggled = st.toggle("🌙  Dark" if _is_dark else "☀️  Light", value=_is_dark, key="jh_theme_tog")
+    if _toggled != _is_dark:
+        st.session_state.jh_theme = "dark" if _toggled else "light"
         st.rerun()
-    # stc.html() renders in an iframe with allow-same-origin → JS CAN reach window.parent.document
-    stc.html(f"""
-<style>
-  html,body{{margin:0;padding:0;background:transparent;overflow:hidden}}
-</style>
-<div onclick="window.parent.document.querySelectorAll('button').forEach(function(b){{if(b.innerText.trim()==='JH_TOG')b.click()}})"
-     style="display:flex;justify-content:center;align-items:center;
-            height:58px;cursor:pointer;">
-  <span style="display:inline-flex;align-items:center;gap:13px;
-               font-family:'DM Mono',monospace,sans-serif;font-size:1.08rem;
-               font-weight:500;color:{_tx_col};user-select:none;">
-    <span style="width:54px;height:30px;background:{_pill_bg};border-radius:999px;
-                 border:1.5px solid {_pill_bd};position:relative;
-                 display:inline-block;flex-shrink:0;">
-      <span style="position:absolute;width:22px;height:22px;background:{_knob_bg};
-                   border-radius:50%;top:3px;left:{_knob_l};
-                   box-shadow:0 1px 5px rgba(0,0,0,.5);"></span>
-    </span>
-    {_icon}&nbsp;&nbsp;{_lbl}
-  </span>
-</div>
-""", height=60)
 
     st.markdown("**Target Roles**")
     st.markdown('<p style="font-size:.75rem;color:var(--tx);opacity:.75;margin-top:-6px;margin-bottom:10px">Any profession — Data Analyst, Lawyer, Developer...</p>', unsafe_allow_html=True)
