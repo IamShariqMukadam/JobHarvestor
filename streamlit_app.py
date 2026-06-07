@@ -250,7 +250,10 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdow
   opacity:.85 !important;transform:translateY(-1px) !important;
 }}
 
-/* ── SIDEBAR CONTROLS — styled via JS, not hidden ── */
+/* ── HIDE NATIVE SIDEBAR CONTROLS (custom floating btn handles it) ── */
+[data-testid="collapsedControl"],[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarHeader"] button,
+section[data-testid="stSidebar"] button[aria-label="Close sidebar"]{{display:none !important}}
 
 
 
@@ -594,45 +597,98 @@ section[data-testid="stExpander"] [data-testid="stFileUploadDropzone"] *{{
 }}
 </style>
 """, unsafe_allow_html=True)
-# --- INJECT SIDEBAR BUTTON STYLES ---
+# --- INJECT CUSTOM FLOATING SIDEBAR TOGGLE ---
 stc.html("""<script>
 (function() {
-  if (window.parent.document.getElementById('jh-sidebar-style')) return;
-  var style = window.parent.document.createElement('style');
-  style.id = 'jh-sidebar-style';
-  style.textContent = `
-    [data-testid="stSidebarHeader"],
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="collapsedControl"] {
-      display: flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-    [data-testid="stSidebarHeader"] button,
-    [data-testid="stSidebarCollapseButton"] button,
-    [data-testid="collapsedControl"] button,
-    [data-testid="collapsedControl"] > div {
-      background: rgba(240,192,64,.15) !important;
-      border: 1px solid rgba(240,192,64,.35) !important;
-      color: #F0C040 !important;
-      border-radius: 0 10px 10px 0 !important;
-      width: 28px !important;
-      min-width: 28px !important;
-      transition: background .2s !important;
-    }
-    [data-testid="stSidebarHeader"] button:hover,
-    [data-testid="stSidebarCollapseButton"] button:hover,
-    [data-testid="collapsedControl"] button:hover {
-      background: rgba(240,192,64,.3) !important;
-    }
-    [data-testid="stSidebarHeader"] svg,
-    [data-testid="stSidebarCollapseButton"] svg,
-    [data-testid="collapsedControl"] svg {
-      fill: #F0C040 !important;
-      color: #F0C040 !important;
-    }
-  `;
-  window.parent.document.head.appendChild(style);
+  var MAX_TRIES = 25, tries = 0;
+
+  function init() {
+    tries++;
+    if (tries > MAX_TRIES) return;
+
+    try {
+      var doc = window.parent.document;
+      if (!doc || !doc.body) { setTimeout(init, 200); return; }
+
+      /* ── inject button CSS into parent doc once ── */
+      if (!doc.getElementById('jh-sb-style')) {
+        var s = doc.createElement('style');
+        s.id = 'jh-sb-style';
+        s.textContent = `
+          #jh-sidebar-tog {
+            position: fixed;
+            left: 0;
+            top: 50vh;
+            z-index: 99999;
+            background: #F0C040;
+            color: #080808;
+            width: 26px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: 900;
+            border-radius: 0 10px 10px 0;
+            user-select: none;
+            box-shadow: 3px 0 22px rgba(240,192,64,.35);
+            transform: translateY(-50%);
+            animation: jh-nudge 1.8s ease-in-out 0.8s 4;
+            transition: background .18s, box-shadow .18s;
+          }
+          #jh-sidebar-tog:hover {
+            background: #E0AA3E;
+            box-shadow: 3px 0 32px rgba(240,192,64,.55);
+          }
+          @keyframes jh-nudge {
+            0%,100% { left: 0px; }
+            50%      { left: 7px; }
+          }
+        `;
+        doc.head.appendChild(s);
+      }
+
+      /* ── create button div once ── */
+      if (doc.getElementById('jh-sidebar-tog')) return;
+
+      var btn = doc.createElement('div');
+      btn.id = 'jh-sidebar-tog';
+
+      function isSidebarOpen() {
+        var sb = doc.querySelector('section[data-testid="stSidebar"]');
+        if (!sb) return false;
+        var w = window.parent.getComputedStyle(sb).width;
+        return parseInt(w) > 50;
+      }
+
+      function updateIcon() {
+        btn.textContent = isSidebarOpen() ? '\u2039' : '\u203a';
+      }
+
+      updateIcon();
+
+      btn.onclick = function() {
+        /* click the native (hidden) toggle button */
+        var native =
+          doc.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
+          doc.querySelector('[data-testid="collapsedControl"] button') ||
+          doc.querySelector('section[data-testid="stSidebar"] button[aria-label="Close sidebar"]') ||
+          doc.querySelector('[data-testid="stSidebarHeader"] button');
+        if (native) {
+          native.style.display = '';   /* unhide briefly so it's clickable */
+          native.click();
+          native.style.display = 'none';
+        }
+        setTimeout(updateIcon, 350);
+      };
+
+      doc.body.appendChild(btn);
+
+    } catch(e) { /* cross-origin guard — skip silently */ }
+  }
+
+  setTimeout(init, 400);
 })();
 </script>""", height=0, scrolling=False)
 
