@@ -743,6 +743,24 @@ stc.html("""<script>
 
       /* poll to keep button in sync with sidebar (handles rerun-triggered state changes) */
       setInterval(updateBtn, 500);
+      // ── Hide __JH_THEME__ button + expose global click hook ──
+      (function(){
+        var _themeBtn = null;
+        function hideAndWire(){
+          try{
+            var sb = doc.querySelector('section[data-testid="stSidebar"]');
+            if(!sb) return;
+            var found = Array.from(sb.querySelectorAll('button')).find(function(b){
+              return b.textContent.trim()==='__JH_THEME__';
+            });
+            if(found){ found.style.cssText='display:none!important'; _themeBtn=found; }
+            window.__jhToggleClick = function(){ if(_themeBtn) _themeBtn.click(); };
+          }catch(e){}
+        }
+        hideAndWire();
+        var sbEl = doc.querySelector('section[data-testid="stSidebar"]') || doc.body;
+        new MutationObserver(hideAndWire).observe(sbEl,{childList:true,subtree:true});
+      })();
 
     } catch(e) { /* cross-origin guard — skip silently */ }
   }
@@ -812,21 +830,26 @@ def persist():
 def _scroll_to_bottom():
     stc.html("""
 <script>
-(function() {
-  function scroll() {
-    var inp = window.parent.document.querySelector('[data-testid="stChatInput"]');
-    if (inp) { inp.scrollIntoView({behavior:'smooth', block:'end'}); return; }
+(function(){{
+  document.getElementById('jh-ios-tog').onclick = function(){{
+    try{{ window.parent.__jhToggleClick(); }}catch(e){{}}
+  }};
+}})();
+# (function() {
+#   function scroll() {
+#     var inp = window.parent.document.querySelector('[data-testid="stChatInput"]');
+#     if (inp) { inp.scrollIntoView({behavior:'smooth', block:'end'}); return; }
 
-    var main = window.parent.document.querySelector('section[data-testid="stMain"]')
-             || window.parent.document.querySelector('.main');
+#     var main = window.parent.document.querySelector('section[data-testid="stMain"]')
+#              || window.parent.document.querySelector('.main');
 
-    if (main) main.scrollTo({top: main.scrollHeight, behavior:'smooth'});
-  }
+#     if (main) main.scrollTo({top: main.scrollHeight, behavior:'smooth'});
+#   }
 
-  scroll();
-  setTimeout(scroll, 120);
-  setTimeout(scroll, 350);
-})();
+#   scroll();
+#   setTimeout(scroll, 120);
+#   setTimeout(scroll, 350);
+# })();
 </script>
 """, height=0, scrolling=False)
 
