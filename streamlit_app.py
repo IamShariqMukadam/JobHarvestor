@@ -107,50 +107,28 @@ section[data-testid="stSidebar"]{{background:var(--bg-2) !important;border-right
 section[data-testid="stSidebar"]>div{{background:transparent !important;padding-top:.3rem !important}}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
 
-/*/* ── SIDEBAR RADIO THEME TOGGLE ── */
+/* ── SIDEBAR RADIO THEME TOGGLE ── */
 section[data-testid="stSidebar"] .stRadio{{
   display:flex !important;justify-content:center !important;
 }}
-section[data-testid="stSidebar"] .stRadio > div[role="radiogroup"],
-section[data-testid="stSidebar"] .stRadio > div {{
-  flex-direction:row !important;gap:2px !important;
-  background:var(--inp-bg) !important;
-  border:1px solid var(--bd) !important;
-  border-radius:999px !important;padding:3px !important;
+section[data-testid="stSidebar"] .stRadio>div{{
+  flex-direction:row !important;gap:2px !important;background:var(--inp-bg) !important;
+  border:1px solid var(--bd) !important;border-radius:999px !important;padding:3px !important;
   margin-bottom:12px !important;display:inline-flex !important;
-  align-items:center !important;
 }}
-section[data-testid="stSidebar"] .stRadio label {{
-  border-radius:999px !important;padding:5px 14px !important;
-  font-family:var(--f-mono) !important;font-size:.72rem !important;
-  color:var(--tx-m) !important;cursor:pointer !important;
+section[data-testid="stSidebar"] .stRadio label{{
+  border-radius:999px !important;padding:5px 14px !important;font-family:var(--f-mono) !important;
+  font-size:.70rem !important;color:var(--tx-m) !important;cursor:pointer !important;
   transition:all .16s !important;background:transparent !important;
-  display:flex !important;align-items:center !important;
-  gap:4px !important;line-height:1 !important;
+  display:flex !important;align-items:center !important;gap:4px !important;
 }}
-/* Hide ONLY the radio circle — target by position within the flex row */
-section[data-testid="stSidebar"] .stRadio label > div:not(:has(p)):not(:has(span)) {{
-  display:none !important;
-}}
-/* Fallback for older Streamlit — hide first child if it has no text */
-section[data-testid="stSidebar"] .stRadio input {{
-  display:none !important;
-}}
-/* Ensure text is ALWAYS visible */
-section[data-testid="stSidebar"] .stRadio label p,
-section[data-testid="stSidebar"] .stRadio label span {{
-  display:inline !important;visibility:visible !important;
-  color:inherit !important;font-size:.72rem !important;
-}}
-/* Active pill */
+section[data-testid="stSidebar"] .stRadio label > div:first-child{{display:none !important}}
 section[data-testid="stSidebar"] .stRadio label:has(input:checked),
-section[data-testid="stSidebar"] .stRadio label[data-checked="true"] {{
-  background:var(--accent) !important;
-  color:#080808 !important;font-weight:700 !important;
+section[data-testid="stSidebar"] .stRadio label[data-checked="true"]{{
+  background:var(--accent) !important;color:#080808 !important;font-weight:700 !important;
 }}
-section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stWidgetLabel"] {{
-  display:none !important;
-}}
+section[data-testid="stSidebar"] .stRadio input{{display:none !important}}
+section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"]{{display:none !important}}
 
 /* ── SIDEBAR BRAND ── */
 .sidebar-brand{{
