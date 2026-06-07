@@ -16,8 +16,7 @@ import uuid
 
 # ── Per-user session isolation ────────────────────────
 if "session_id" not in st.session_state:
-    _qsid = st.query_params.get("sid", "")
-    st.session_state.session_id = _qsid if _qsid else uuid.uuid4().hex[:10]
+    st.session_state.session_id = uuid.uuid4().hex[:10]
 
 SESSION_DIR = f"data/sessions/{st.session_state.session_id}"
 os.makedirs(SESSION_DIR, exist_ok=True)
@@ -49,7 +48,7 @@ st.set_page_config(
 
 
 if "jh_theme" not in st.session_state:
-    st.session_state.jh_theme = st.query_params.get("jh_theme", "dark")
+    st.session_state.jh_theme = "dark"
 
 # if "jh_theme_radio" in st.session_state:
 #     _rval = str(st.session_state.jh_theme_radio)
@@ -133,7 +132,8 @@ hr{{border-color:var(--bd) !important;margin:1.4rem 0 !important}}
 section[data-testid="stSidebar"]{{background:var(--bg-2) !important;border-right:1px solid var(--bd) !important}}
 section[data-testid="stSidebar"]>div{{background:transparent !important;padding-top:.3rem !important}}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
-/* ── SIDEBAR THEME TOGGLE — now pure HTML <a> element, no CSS needed ── */
+/* ── SIDEBAR THEME TOGGLE — hidden real button, visual HTML toggle ── */
+section[data-testid="stSidebar"] .element-container:has(#jh-theme-marker)+.element-container{{height:0 !important;overflow:hidden !important;margin:0 !important;padding:0 !important;pointer-events:none !important;}}
 
 
 # /* ── SIDEBAR RADIO THEME TOGGLE — hidden, JS-driven ── */
@@ -955,33 +955,36 @@ with st.sidebar:
 """, unsafe_allow_html=True)
     # ── Theme toggle ──────────────────────────────────────
     _is_dark = st.session_state.jh_theme == "dark"
-    _next    = "light" if _is_dark else "dark"
-    _sid     = st.session_state.session_id
-    _pill_bg = "#F0C040" if _is_dark else "rgba(237,233,224,.18)"
-    _pill_bd = "rgba(240,192,64,.55)" if _is_dark else "rgba(237,233,224,.22)"
-    _knob_bg = "#080808" if _is_dark else "#EDE9E0"
-    _knob_l  = "28px"   if _is_dark else "3px"
-    _tx_col  = "rgba(237,233,224,.62)" if _is_dark else "rgba(12,12,10,.55)"
-    _icon    = "🌙" if _is_dark else "☀️"
-    _lbl     = "Dark"   if _is_dark else "Light"
+    _pill_bg = "#F0C040"                    if _is_dark else "rgba(237,233,224,.18)"
+    _pill_bd = "rgba(240,192,64,.55)"       if _is_dark else "rgba(237,233,224,.22)"
+    _knob_bg = "#080808"                    if _is_dark else "#EDE9E0"
+    _knob_l  = "28px"                       if _is_dark else "3px"
+    _tx_col  = "rgba(237,233,224,.62)"      if _is_dark else "rgba(12,12,10,.55)"
+    _icon    = "🌙"                         if _is_dark else "☀️"
+    _lbl     = "Dark"                       if _is_dark else "Light"
+    # JS finds the hidden button (empty innerText) and clicks it → in-place rerun, no navigation
+    _js = "(function(){var doc=document;try{if(window.parent&&window.parent.document)doc=window.parent.document;}catch(e){}var btns=doc.querySelectorAll('section[data-testid=\"stSidebar\"] button');for(var i=0;i<btns.length;i++){if(!btns[i].innerText.trim()){btns[i].click();return;}}})();"
     st.markdown(f"""
-<div style="display:flex;justify-content:center;margin:14px 0 20px;">
-  <a href="?jh_theme={_next}&sid={_sid}" style="text-decoration:none;">
-    <span style="display:inline-flex;align-items:center;gap:13px;cursor:pointer;
-                 font-family:'DM Mono',monospace;font-size:1.08rem;font-weight:500;
-                 color:{_tx_col};letter-spacing:.02em;user-select:none;">
-      <span style="width:54px;height:30px;background:{_pill_bg};border-radius:999px;
-                   border:1.5px solid {_pill_bd};position:relative;
-                   display:inline-block;flex-shrink:0;vertical-align:middle;">
-        <span style="position:absolute;width:22px;height:22px;background:{_knob_bg};
-                     border-radius:50%;top:3px;left:{_knob_l};
-                     box-shadow:0 1px 5px rgba(0,0,0,.45);display:block;"></span>
-      </span>
-      {_icon}&nbsp;&nbsp;{_lbl}
+<div style="display:flex;justify-content:center;margin:14px 0 4px;cursor:pointer;" onclick="{_js}">
+  <span style="display:inline-flex;align-items:center;gap:13px;
+               font-family:'DM Mono',monospace;font-size:1.08rem;font-weight:500;
+               color:{_tx_col};letter-spacing:.02em;user-select:none;">
+    <span style="width:54px;height:30px;background:{_pill_bg};border-radius:999px;
+                 border:1.5px solid {_pill_bd};position:relative;
+                 display:inline-block;flex-shrink:0;vertical-align:middle;">
+      <span style="position:absolute;width:22px;height:22px;background:{_knob_bg};
+                   border-radius:50%;top:3px;left:{_knob_l};
+                   box-shadow:0 1px 5px rgba(0,0,0,.45);display:block;"></span>
     </span>
-  </a>
+    {_icon}&nbsp;&nbsp;{_lbl}
+  </span>
 </div>
+<span id="jh-theme-marker" style="display:none"></span>
 """, unsafe_allow_html=True)
+    # Real hidden button — CSS hides it via the #jh-theme-marker sibling rule above
+    if st.button("\u200b", key="jh_theme_btn"):
+        st.session_state.jh_theme = "light" if _is_dark else "dark"
+        st.rerun()
 
     st.markdown("**Target Roles**")
     st.markdown('<p style="font-size:.75rem;color:var(--tx);opacity:.75;margin-top:-6px;margin-bottom:10px">Any profession — Data Analyst, Lawyer, Developer...</p>', unsafe_allow_html=True)
