@@ -168,6 +168,15 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !imp
 # }}
 # section[data-testid="stSidebar"] .stRadio input{{display:none !important}}
 # section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"]{{display:none !important}}
+/* ── SIDEBAR THEME TOGGLE ── */
+section[data-testid="stSidebar"] [data-testid="stToggle"]{{
+  display:flex !important;justify-content:center !important;
+  margin:-4px 0 10px !important;
+}}
+section[data-testid="stSidebar"] [data-testid="stToggle"] p{{
+  font-family:var(--f-mono) !important;font-size:.72rem !important;
+  color:var(--tx-m) !important;
+}}
 
 /* ── SIDEBAR BRAND ── */
 .sidebar-brand{{
@@ -262,6 +271,10 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !imp
 [data-testid="stSlider"] span{{
   color:var(--tx-m) !important;font-family:var(--f-mono) !important;
   background:transparent !important;padding:0 !important;
+}}
+:root {{ --primary: var(--accent) !important; }}
+[data-testid="stSlider"] div[style*="rgb(255, 75, 75)"] {{
+  background: var(--accent) !important;
 }}
 
 /* ── BUTTONS ── */
@@ -971,11 +984,15 @@ with st.sidebar:
 </div>
 """, unsafe_allow_html=True)
     
-    # Theme toggle — reliable button-based approach
+   # Theme toggle — native st.toggle, no iframe bridge needed
     _is_dark = st.session_state.jh_theme == "dark"
-
-    if st.button("__JH_THEME__", key="jh_theme_btn"):
-        st.session_state.jh_theme = "light" if _is_dark else "dark"
+    _toggled = st.toggle(
+        "🌙  Dark" if _is_dark else "☀️  Light",
+        value=_is_dark,
+        key="jh_theme_tog"
+    )
+    if _toggled != _is_dark:
+        st.session_state.jh_theme = "dark" if _toggled else "light"
         st.rerun()
 
     stc.html(f"""
