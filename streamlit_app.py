@@ -217,6 +217,10 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdow
 [data-testid="stSlider"] [data-baseweb="slider"] div[class*="Track"]>div:first-child{{
   background:var(--accent) !important;border-radius:0 !important;
 }}
+/* InnerTrack = the actual fill segment — sibling of track, not child */
+[data-testid="stSlider"] [data-baseweb="slider"] div[class*="nnerTrack"]{{
+  background:var(--accent) !important;border-radius:999px !important;
+}}
 /* Tick labels — target by testid, not span wildcard bleeding into thumb tooltip */
 [data-testid="stSlider"] [data-testid="stTickBarMin"],
 [data-testid="stSlider"] [data-testid="stTickBarMax"]{{
