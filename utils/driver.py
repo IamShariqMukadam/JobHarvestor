@@ -1,6 +1,49 @@
 import os
+import re
+import subprocess
 import undetected_chromedriver as uc
 from config import BRAVE_PATH
+
+
+def _detect_chrome_major() -> int | None:
+    """
+    Reads the major version number from the installed Chrome/Chromium binary.
+    Returns an int (e.g. 148) or None if detection fails.
+    """
+    candidates = []
+
+    # Prefer whatever BRAVE_PATH points to (works locally and on Streamlit Cloud)
+    if os.path.exists(BRAVE_PATH):
+        candidates.append(BRAVE_PATH)
+
+    # Common fallback paths in cloud / CI environments
+    candidates += [
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+    ]
+
+    for binary in candidates:
+        if not os.path.exists(binary):
+            continue
+        try:
+            result = subprocess.run(
+                [binary, "--version"],
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+            # Output looks like: "Chromium 148.0.7778.215 built on …"
+            m = re.search(r"(\d+)\.\d+\.\d+", result.stdout)
+            if m:
+                major = int(m.group(1))
+                print(f"  [Driver] Detected browser version: {major} ({binary})")
+                return major
+        except Exception:
+            continue
+
+    return None
 
 
 def get_driver(headless=False):
@@ -26,10 +69,15 @@ def get_driver(headless=False):
     if headless:
         options.add_argument("--headless=new")
 
+    # Pin version_main so uc downloads a driver that actually matches the
+    # installed browser. Without this, uc may grab a mismatched driver on
+    # cloud deployments where Chrome and ChromeDriver update independently.
+    version_main = _detect_chrome_major()
+
     driver = uc.Chrome(
         options=options,
         use_subprocess=True,
-        # version_main removed — auto-detects your installed version
+        version_main=version_main,  # None → uc auto-detects (safe fallback)
     )
 
     return driver
