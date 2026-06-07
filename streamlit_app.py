@@ -107,28 +107,50 @@ section[data-testid="stSidebar"]{{background:var(--bg-2) !important;border-right
 section[data-testid="stSidebar"]>div{{background:transparent !important;padding-top:.3rem !important}}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
 
-/* ── SIDEBAR RADIO THEME TOGGLE ── */
+/*/* ── SIDEBAR RADIO THEME TOGGLE ── */
 section[data-testid="stSidebar"] .stRadio{{
   display:flex !important;justify-content:center !important;
 }}
-section[data-testid="stSidebar"] .stRadio>div{{
-  flex-direction:row !important;gap:2px !important;background:var(--inp-bg) !important;
-  border:1px solid var(--bd) !important;border-radius:999px !important;padding:3px !important;
+section[data-testid="stSidebar"] .stRadio > div[role="radiogroup"],
+section[data-testid="stSidebar"] .stRadio > div {{
+  flex-direction:row !important;gap:2px !important;
+  background:var(--inp-bg) !important;
+  border:1px solid var(--bd) !important;
+  border-radius:999px !important;padding:3px !important;
   margin-bottom:12px !important;display:inline-flex !important;
+  align-items:center !important;
 }}
-section[data-testid="stSidebar"] .stRadio label{{
-  border-radius:999px !important;padding:5px 14px !important;font-family:var(--f-mono) !important;
-  font-size:.70rem !important;color:var(--tx-m) !important;cursor:pointer !important;
+section[data-testid="stSidebar"] .stRadio label {{
+  border-radius:999px !important;padding:5px 14px !important;
+  font-family:var(--f-mono) !important;font-size:.72rem !important;
+  color:var(--tx-m) !important;cursor:pointer !important;
   transition:all .16s !important;background:transparent !important;
-  display:flex !important;align-items:center !important;gap:4px !important;
+  display:flex !important;align-items:center !important;
+  gap:4px !important;line-height:1 !important;
 }}
-section[data-testid="stSidebar"] .stRadio label > div:first-child{{display:none !important}}
+/* Hide ONLY the radio circle — target by position within the flex row */
+section[data-testid="stSidebar"] .stRadio label > div:not(:has(p)):not(:has(span)) {{
+  display:none !important;
+}}
+/* Fallback for older Streamlit — hide first child if it has no text */
+section[data-testid="stSidebar"] .stRadio input {{
+  display:none !important;
+}}
+/* Ensure text is ALWAYS visible */
+section[data-testid="stSidebar"] .stRadio label p,
+section[data-testid="stSidebar"] .stRadio label span {{
+  display:inline !important;visibility:visible !important;
+  color:inherit !important;font-size:.72rem !important;
+}}
+/* Active pill */
 section[data-testid="stSidebar"] .stRadio label:has(input:checked),
-section[data-testid="stSidebar"] .stRadio label[data-checked="true"]{{
-  background:var(--accent) !important;color:#080808 !important;font-weight:700 !important;
+section[data-testid="stSidebar"] .stRadio label[data-checked="true"] {{
+  background:var(--accent) !important;
+  color:#080808 !important;font-weight:700 !important;
 }}
-section[data-testid="stSidebar"] .stRadio input{{display:none !important}}
-section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"]{{display:none !important}}
+section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stWidgetLabel"] {{
+  display:none !important;
+}}
 
 /* ── SIDEBAR BRAND ── */
 .sidebar-brand{{
@@ -611,71 +633,41 @@ section[data-testid="stExpander"] [data-testid="stFileUploadDropzone"] *{{
 </style>
 """, unsafe_allow_html=True)
 # --- INJECT FLOATING BUTTONS ---
-stc.html("""
-<script>
+stc.html("""<script>
 (function() {
-  // 1. Sidebar Edge-Tracking Button
-  if (!window.parent.document.getElementById('jh-sidebar-tog')) {
-    var d = window.parent.document.createElement('div');
-    d.id = 'jh-sidebar-tog';
-    d.innerHTML = '&#8250;';
-    d.onclick = function() {
-      var b = window.parent.document.querySelector('[data-testid="collapsedControl"]')
-           || window.parent.document.querySelector('button[aria-label="Close sidebar"]')
-           || window.parent.document.querySelector('button[aria-label="Open sidebar"]')
-           || window.parent.document.querySelector('[data-testid="stSidebarHeader"] button');
-      if (b) b.click();
-    };
-    window.parent.document.body.appendChild(d);
-
-    setInterval(function() {
-      var sb = window.parent.document.querySelector('section[data-testid="stSidebar"]');
-      var btn = window.parent.document.getElementById('jh-sidebar-tog');
-      if (sb && btn) {
-        var rightEdge = sb.getBoundingClientRect().right;
-        if (rightEdge > 50) { 
-          btn.style.left = rightEdge + 'px';
-          btn.innerHTML = '&#8249;'; 
-          btn.style.borderRadius = '16px 0 0 16px'; 
-          btn.style.border = '2px solid var(--jh-line-strong)';
-          btn.style.borderRight = 'none';
-        } else { 
-          btn.style.left = '0px';
-          btn.innerHTML = '&#8250;'; 
-          btn.style.borderRadius = '0 16px 16px 0'; 
-          btn.style.border = '2px solid var(--jh-line-strong)';
-          btn.style.borderLeft = 'none';
-        }
-      }
-    }, 50);
-  }
-
-  # // 2. Floating Theme Toggle
-  # if (!window.parent.document.getElementById('jh-theme-tog')) {
-  #   var t = window.parent.document.createElement('button');
-  #   t.id = 'jh-theme-tog';
-  #   t.onclick = function() {
-  #       var labels = window.parent.document.querySelectorAll('.theme-card label');
-  #       if(labels.length >= 2) {
-  #           var isDark = window.parent.document.querySelector('.theme-card input').checked;
-  #           if(isDark) labels[1].click(); // Click Light
-  #           else labels[0].click();       // Click Dark
-  #       }
-  #   };
-  #   window.parent.document.body.appendChild(t);
-    
-  #   // Sync text with sidebar radio state
-  #   setInterval(function() {
-  #       var isDark = window.parent.document.querySelector('.theme-card input');
-  #       var btn = window.parent.document.getElementById('jh-theme-tog');
-  #       if(isDark && btn) {
-  #           btn.innerHTML = isDark.checked ? '☀️ Light Mode' : '🌙 Dark Mode';
-  #       }
-  #   }, 200);
-  # }
+  if (window.parent.document.getElementById('jh-sidebar-tog')) return;
+  var style = window.parent.document.createElement('style');
+  style.textContent = `
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="collapsedControl"] button,
+    [data-testid="collapsedControl"] > div {
+      background: rgba(240,192,64,.15) !important;
+      border: 1px solid rgba(240,192,64,.35) !important;
+      color: #F0C040 !important;
+      border-radius: 0 10px 10px 0 !important;
+      width: 22px !important;
+      transition: background .2s !important;
+    }
+    [data-testid="stSidebarCollapseButton"] button:hover,
+    [data-testid="collapsedControl"] button:hover {
+      background: rgba(240,192,64,.3) !important;
+    }
+    [data-testid="stSidebarCollapseButton"] svg,
+    [data-testid="collapsedControl"] svg {
+      fill: #F0C040 !important;
+      color: #F0C040 !important;
+    }
+  `;
+  window.parent.document.head.appendChild(style);
+  window.parent.document.getElementById && (window.parent.document.body.id = 'jh-sidebar-tog');
 })();
-</script>
-""", height=0, scrolling=False)
+</script>""", height=0, scrolling=False)
 
 
 @st.cache_data(ttl=0)
