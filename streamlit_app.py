@@ -749,6 +749,24 @@ stc.html("""<script>
 
   setTimeout(init, 400);
 })();
+         
+
+// Fix slider fill color
+(function() {
+  function fixSliders() {
+    try {
+      var doc = window.parent.document;
+      doc.querySelectorAll('[data-testid="stSlider"] [data-baseweb="slider"] div').forEach(function(d) {
+        var c = window.parent.getComputedStyle(d).backgroundColor;
+        if (c === 'rgb(255, 75, 75)') {
+          d.style.cssText += 'background:#F0C040 !important';
+        }
+      });
+    } catch(e) {}
+  }
+  fixSliders();
+  setInterval(fixSliders, 800);
+})();
 </script>""", height=0, scrolling=False)
 
 
@@ -942,7 +960,7 @@ with st.sidebar:
     <style>
     .jh-ios-wrap{{display:flex;justify-content:center;margin:-6px 0 10px}}
     .jh-ios{{
-    width:64px;height:32px;border-radius:999px;cursor:pointer;
+    width:94px;height:32px;border-radius:999px;cursor:pointer;
     border:2px solid {"#484848" if _is_dark else "#F0C040"};
     background:{"#1a1a1a" if _is_dark else "transparent"};
     display:flex;align-items:center;padding:3px;
