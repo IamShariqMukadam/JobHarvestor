@@ -254,21 +254,7 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdow
 [data-testid="collapsedControl"],[data-testid="stSidebarHeader"] button,
 section[data-testid="stSidebar"] button[aria-label="Close sidebar"]{{display:none !important}}
 
-/* ── FLOATING SIDEBAR TOGGLE ── */
-#jh-sidebar-tog{{
-  position:fixed;top:50vh;transform:translateY(-50%);z-index:99999;
-  background:var(--btn-bg) !important;color:var(--btn-tx) !important;
-  width:38px;height:100px;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:17px;font-weight:900;user-select:none;transition:all .2s;
-}}
-#jh-sidebar-tog:hover{{opacity:.8}}
-# #jh-theme-tog{{
-#   position:fixed;top:12px;right:16px;z-index:99999;
-#   background:var(--btn-bg) !important;color:var(--btn-tx) !important;
-#   border:1px solid var(--bd-s) !important;border-radius:999px;
-#   padding:7px 14px;font-size:.79rem;font-weight:700;cursor:pointer;
-#   box-shadow:var(--glow) !important;font-family:var(--f-sans) !important;
-# }}
+
 
 /* ── HERO ── */
 .jh-hero{{
@@ -610,11 +596,12 @@ section[data-testid="stExpander"] [data-testid="stFileUploadDropzone"] *{{
 }}
 </style>
 """, unsafe_allow_html=True)
-# --- INJECT FLOATING BUTTONS ---
+# --- INJECT SIDEBAR BUTTON STYLES ---
 stc.html("""<script>
 (function() {
-  if (window.parent.document.getElementById('jh-sidebar-tog')) return;
+  if (window.parent.document.getElementById('jh-sidebar-style')) return;
   var style = window.parent.document.createElement('style');
+  style.id = 'jh-sidebar-style';
   style.textContent = `
     [data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"] {
@@ -643,7 +630,6 @@ stc.html("""<script>
     }
   `;
   window.parent.document.head.appendChild(style);
-  window.parent.document.getElementById && (window.parent.document.body.id = 'jh-sidebar-tog');
 })();
 </script>""", height=0, scrolling=False)
 
