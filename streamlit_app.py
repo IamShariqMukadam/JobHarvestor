@@ -983,23 +983,31 @@ with st.sidebar:
     </div>
     <script>
     (function(){{
-    var tries=0;
-    function init(){{
-        tries++;
-        if(tries>20) return;
+    var _nativeBtn = null;
+    var _tog = document.getElementById('jh-ios-tog');
+
+    function findAndHide(){{
         try{{
-        var doc=window.parent.document;
-        var btn=Array.from(doc.querySelectorAll('button')).find(function(b){{
-            return b.textContent.trim()==='__JH_THEME__';
+        var doc = window.parent.document;
+        var btn = Array.from(doc.querySelectorAll('button')).find(function(b){{
+            return b.textContent.trim() === '__JH_THEME__';
         }});
-        if(!btn){{ setTimeout(init,300); return; }}
-        btn.style.cssText='position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;overflow:hidden;top:-9999px';
-        document.getElementById('jh-ios-tog').addEventListener('click',function(){{
-            btn.click();
-        }});
-        }}catch(e){{ setTimeout(init,300); }}
+        if(btn){{
+            btn.style.cssText = 'position:fixed!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;overflow:hidden!important;top:-9999px!important;left:-9999px!important';
+            if(btn !== _nativeBtn){{
+            _nativeBtn = btn;
+            if(_tog){{
+                _tog.onclick = function(){{ _nativeBtn.click(); }};
+            }}
+            }}
+        }}
+        }}catch(e){{}}
     }}
-    setTimeout(init,400);
+
+    findAndHide();
+    setTimeout(findAndHide, 200);
+    setTimeout(findAndHide, 600);
+    setInterval(findAndHide, 800);
     }})();
     </script>
     """, height=48, scrolling=False)
