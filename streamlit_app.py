@@ -132,7 +132,7 @@ hr{{border-color:var(--bd) !important;margin:1.4rem 0 !important}}
 section[data-testid="stSidebar"]{{background:var(--bg-2) !important;border-right:1px solid var(--bd) !important}}
 section[data-testid="stSidebar"]>div{{background:transparent !important;padding-top:.3rem !important}}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
-/* ── SIDEBAR THEME TOGGLE — hidden real button, visual HTML toggle ── */
+/* ── SIDEBAR THEME TOGGLE ── */
 section[data-testid="stSidebar"] .element-container:has(#jh-theme-marker)+.element-container{{height:0 !important;overflow:hidden !important;margin:0 !important;padding:0 !important;}}
 
 
@@ -955,37 +955,41 @@ with st.sidebar:
 """, unsafe_allow_html=True)
     # ── Theme toggle ──────────────────────────────────────
     _is_dark = st.session_state.jh_theme == "dark"
-    _pill_bg = "#F0C040"               if _is_dark else "rgba(237,233,224,.18)"
-    _pill_bd = "rgba(240,192,64,.55)"  if _is_dark else "rgba(237,233,224,.22)"
+    _pill_bg = "#F0C040"               if _is_dark else "rgba(50,50,50,.6)"
+    _pill_bd = "rgba(240,192,64,.6)"   if _is_dark else "rgba(200,200,200,.3)"
     _knob_bg = "#080808"               if _is_dark else "#EDE9E0"
     _knob_l  = "28px"                  if _is_dark else "3px"
-    _tx_col  = "rgba(237,233,224,.62)" if _is_dark else "rgba(12,12,10,.55)"
+    _tx_col  = "rgba(237,233,224,.7)"  if _is_dark else "rgba(12,12,10,.6)"
     _icon    = "🌙"                    if _is_dark else "☀️"
     _lbl     = "Dark"                  if _is_dark else "Light"
-    # Regular string (not f-string) so { } are literal — safe to embed in onclick="..."
-    # Uses only single quotes inside so no conflict with the outer onclick double-quote attribute
-    _js = "var b=document.querySelectorAll('button');for(var i=0;i<b.length;i++){if(b[i].innerText.trim()==='JH_TOG'){b[i].click();return;}}"
-    st.markdown(f"""
-<div onclick="{_js}" style="display:flex;justify-content:center;margin:14px 0 4px;cursor:pointer;">
+    # Marker anchors the CSS sibling rule that hides the real button below
+    st.markdown('<span id="jh-theme-marker" style="display:none"></span>', unsafe_allow_html=True)
+    # Real button — hidden by CSS, clicked by JS from the iframe below
+    if st.button("JH_TOG", key="jh_theme_btn"):
+        st.session_state.jh_theme = "light" if _is_dark else "dark"
+        st.rerun()
+    # stc.html() renders in an iframe with allow-same-origin → JS CAN reach window.parent.document
+    stc.html(f"""
+<style>
+  html,body{{margin:0;padding:0;background:transparent;overflow:hidden}}
+</style>
+<div onclick="window.parent.document.querySelectorAll('button').forEach(function(b){{if(b.innerText.trim()==='JH_TOG')b.click()}})"
+     style="display:flex;justify-content:center;align-items:center;
+            height:58px;cursor:pointer;">
   <span style="display:inline-flex;align-items:center;gap:13px;
-               font-family:'DM Mono',monospace;font-size:1.08rem;font-weight:500;
-               color:{_tx_col};letter-spacing:.02em;user-select:none;">
+               font-family:'DM Mono',monospace,sans-serif;font-size:1.08rem;
+               font-weight:500;color:{_tx_col};user-select:none;">
     <span style="width:54px;height:30px;background:{_pill_bg};border-radius:999px;
                  border:1.5px solid {_pill_bd};position:relative;
-                 display:inline-block;flex-shrink:0;vertical-align:middle;">
+                 display:inline-block;flex-shrink:0;">
       <span style="position:absolute;width:22px;height:22px;background:{_knob_bg};
                    border-radius:50%;top:3px;left:{_knob_l};
-                   box-shadow:0 1px 5px rgba(0,0,0,.45);display:block;"></span>
+                   box-shadow:0 1px 5px rgba(0,0,0,.5);"></span>
     </span>
     {_icon}&nbsp;&nbsp;{_lbl}
   </span>
 </div>
-<span id="jh-theme-marker" style="display:none"></span>
-""", unsafe_allow_html=True)
-    # Hidden real button — JS finds it by label "JH_TOG", CSS collapses its container
-    if st.button("JH_TOG", key="jh_theme_btn"):
-        st.session_state.jh_theme = "light" if _is_dark else "dark"
-        st.rerun()
+""", height=60)
 
     st.markdown("**Target Roles**")
     st.markdown('<p style="font-size:.75rem;color:var(--tx);opacity:.75;margin-top:-6px;margin-bottom:10px">Any profession — Data Analyst, Lawyer, Developer...</p>', unsafe_allow_html=True)
