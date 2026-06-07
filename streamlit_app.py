@@ -133,7 +133,8 @@ section[data-testid="stSidebar"]{{background:var(--bg-2) !important;border-right
 section[data-testid="stSidebar"]>div{{background:transparent !important;padding-top:.3rem !important}}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
 /* ── SIDEBAR THEME TOGGLE ── */
-section[data-testid="stSidebar"] [data-testid="stToggle"]{{display:flex !important;justify-content:center !important;margin:-4px 0 8px !important;transform:scale(1.3);transform-origin:center}}
+section[data-testid="stSidebar"] [data-testid="stToggle"]{{display:flex !important;justify-content:center !important;margin:8px auto 14px !important;width:100% !important}}
+section[data-testid="stSidebar"] [data-testid="stToggle"] label{{transform:scale(1.4);transform-origin:center;display:flex !important;justify-content:center !important}}
 section[data-testid="stSidebar"] [data-testid="stToggle"] p{{font-family:var(--f-mono) !important;font-size:.72rem !important;color:var(--tx-m) !important}}
 
 
