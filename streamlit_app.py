@@ -132,6 +132,9 @@ hr{{border-color:var(--bd) !important;margin:1.4rem 0 !important}}
 section[data-testid="stSidebar"]{{background:var(--bg-2) !important;border-right:1px solid var(--bd) !important}}
 section[data-testid="stSidebar"]>div{{background:transparent !important;padding-top:.3rem !important}}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
+/* ── SIDEBAR THEME TOGGLE ── */
+section[data-testid="stSidebar"] [data-testid="stToggle"]{{display:flex !important;justify-content:center !important;margin:-4px 0 8px !important}}
+section[data-testid="stSidebar"] [data-testid="stToggle"] p{{font-family:var(--f-mono) !important;font-size:.72rem !important;color:var(--tx-m) !important}}
 
 
 # /* ── SIDEBAR RADIO THEME TOGGLE — hidden, JS-driven ── */
@@ -300,7 +303,6 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !imp
 [data-testid="collapsedControl"],[data-testid="stSidebarCollapseButton"],
 [data-testid="stSidebarHeader"] button,
 section[data-testid="stSidebar"] button[aria-label="Close sidebar"]{{display:none !important}}
-section[data-testid="stSidebar"] [data-testid="stButton"]{{display:none !important}}
 
 
 
@@ -833,30 +835,7 @@ def persist():
 
 
 def _scroll_to_bottom():
-    stc.html("""
-<script>
-(function(){{
-  document.getElementById('jh-ios-tog').onclick = function(){{
-    try{{ window.parent.__jhToggleClick(); }}catch(e){{}}
-  }};
-}})();
-# (function() {
-#   function scroll() {
-#     var inp = window.parent.document.querySelector('[data-testid="stChatInput"]');
-#     if (inp) { inp.scrollIntoView({behavior:'smooth', block:'end'}); return; }
-
-#     var main = window.parent.document.querySelector('section[data-testid="stMain"]')
-#              || window.parent.document.querySelector('.main');
-
-#     if (main) main.scrollTo({top: main.scrollHeight, behavior:'smooth'});
-#   }
-
-#   scroll();
-#   setTimeout(scroll, 120);
-#   setTimeout(scroll, 350);
-# })();
-</script>
-""", height=0, scrolling=False)
+    pass
 
 
 def colorize(line):
@@ -975,54 +954,12 @@ with st.sidebar:
   <div><span class="sb-tag">Market Intelligence</span></div>
 </div>
 """, unsafe_allow_html=True)
-    st.radio(
-    "Theme", ["🌑 Dark", "☀️ Light"],
-    horizontal=True,
-    key="jh_theme_radio",
-    label_visibility="collapsed",
-    )
-
-    # ── iOS-style toggle ──────────────────────────────────
+    # ── Theme toggle ──────────────────────────────────────
     _is_dark = st.session_state.jh_theme == "dark"
-    stc.html(f"""
-    <style>
-    .jh-ios-wrap{{display:flex;justify-content:left;margin:-6px 0 10px}}
-    .jh-ios{{
-    width:94px;height:32px;border-radius:999px;cursor:pointer;
-    border:2px solid {"#484848" if _is_dark else "#F0C040"};
-    background:{"#1a1a1a" if _is_dark else "transparent"};
-    display:flex;align-items:center;padding:3px;
-    justify-content:{"flex-start" if _is_dark else "flex-end"};
-    box-shadow:{"none" if _is_dark else "0 0 18px rgba(240,192,64,.3),inset 0 0 0 1px rgba(240,192,64,.15)"};
-    transition:all .3s cubic-bezier(.4,0,.2,1);
-    }}
-    .jh-knob{{
-    width:22px;height:22px;border-radius:50%;
-    background:{"#484848" if _is_dark else "#F0C040"};
-    display:flex;align-items:center;justify-content:center;
-    font-size:12px;line-height:1;
-    box-shadow:{"inset 0 1px 3px rgba(0,0,0,.5)" if _is_dark else "0 0 12px rgba(240,192,64,.7)"};
-    transition:all .3s cubic-bezier(.4,0,.2,1);
-    }}
-    </style>
-    <div class="jh-ios-wrap">
-    <div class="jh-ios" id="jh-ios-tog">
-        <div class="jh-knob">{"🌙" if _is_dark else "☀️"}</div>
-    </div>
-    </div>
-    <script>
-    (function(){{
-    document.getElementById('jh-ios-tog').addEventListener('click',function(){{
-        try{{
-        var doc = window.parent.document;
-        var sb = doc.querySelector('section[data-testid="stSidebar"]');
-        var radios = (sb||doc).querySelectorAll('input[type="radio"]');
-        radios.forEach(function(r){{ if(!r.checked){{ r.click(); }} }});
-        }}catch(e){{}}
-    }});
-    }})();
-    </script>
-    """, height=48, scrolling=False)
+    _toggled = st.toggle("🌙  Dark" if _is_dark else "☀️  Light", value=_is_dark, key="jh_theme_tog")
+    if _toggled != _is_dark:
+        st.session_state.jh_theme = "dark" if _toggled else "light"
+        st.rerun()
 
     st.markdown("**Target Roles**")
     st.markdown('<p style="font-size:.75rem;color:var(--tx);opacity:.75;margin-top:-6px;margin-bottom:10px">Any profession — Data Analyst, Lawyer, Developer...</p>', unsafe_allow_html=True)
