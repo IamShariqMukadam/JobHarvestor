@@ -11,7 +11,7 @@ from clustering.clusterer import cluster, get_pca_coords
 from clustering.analyzer import analyze_all
 
 
-CLUSTER_REPORT = "data/cluster_report.json"
+CLUSTER_REPORT = os.path.join(os.getenv("JH_SESSION_DIR","data"), "cluster_report.json")
 
 
 def prepare_text(df: pd.DataFrame) -> list[str]:

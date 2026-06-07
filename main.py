@@ -10,7 +10,7 @@ os.makedirs("data", exist_ok=True)
 
 def run():
     import json as _json, config as _cfg
-    _override = "data/scrape_config_override.json"
+    _override = os.path.join(os.getenv("JH_SESSION_DIR","data"), "scrape_config_override.json")
     if os.path.exists(_override):
         with open(_override) as f:
             ov = _json.load(f)

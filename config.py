@@ -55,10 +55,12 @@ BRAVE_PATH = os.getenv("CHROME_PATH", "/usr/bin/chromium")
 MAX_JOBS_PER_SEARCH = 50
 
 # Output paths
-DATA_DIR = "data"
+DATA_DIR = os.getenv("JH_SESSION_DIR", "data")
+os.makedirs(DATA_DIR, exist_ok=True)
 CSV_OUTPUT = os.path.join(DATA_DIR, "JobHarvestor.csv")
 XLSX_OUTPUT = os.path.join(DATA_DIR, "JobHarvestor.xlsx")
 COOKIES_FILE = os.path.join(DATA_DIR, "linkedin_cookies.pkl")
+STOP_FLAG   = os.path.join(DATA_DIR, "scraping_stop.flag")
 
 # Delays — do NOT lower these
 MIN_DELAY = 4

@@ -36,7 +36,7 @@ def scrape_role(role: str, location: str = "") -> list[dict]:
     print(f"  [Internshala] Scraping: {role} | location: {location or 'India-wide'}")
 
     while len(jobs) < config.MAX_JOBS_PER_SEARCH:
-        if os.path.exists("scraping_stop.flag"):
+        if os.path.exists(config.STOP_FLAG):
             print("  [Internshala] Stop signal received."); break
         url = build_url(role, page, location)
         try:
@@ -97,7 +97,7 @@ def scrape_role(role: str, location: str = "") -> list[dict]:
 def scrape(roles: list[str], location: str = "") -> list[dict]:
     all_jobs = []
     for role in roles:
-        if os.path.exists("scraping_stop.flag"):
+        if os.path.exists(config.STOP_FLAG):
             print("  [Internshala] Stop signal received."); break
         jobs = scrape_role(role, location)
         all_jobs.extend(jobs)

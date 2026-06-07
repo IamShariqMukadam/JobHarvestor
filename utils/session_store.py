@@ -4,7 +4,7 @@
 import json
 import os
 
-SESSION_FILE = "data/user_session.json"
+SESSION_FILE = os.path.join(os.getenv("JH_SESSION_DIR","data"), "user_session.json")
 
 
 def load_session() -> dict:

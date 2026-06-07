@@ -5,8 +5,9 @@
 import json
 import os
 
-CLUSTER_REPORT = "data/cluster_report.json"
-PROFILES_FILE  = "data/ground_truth_profiles.json"
+_D = os.getenv("JH_SESSION_DIR","data")
+CLUSTER_REPORT = os.path.join(_D, "cluster_report.json")
+PROFILES_FILE  = os.path.join(_D, "ground_truth_profiles.json")
 
 # Skills appearing in X% of JDs in a cluster = "required" for that tier
 REQUIRED_THRESHOLD  = 40   # 40%+ = must have

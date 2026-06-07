@@ -119,7 +119,7 @@ def api_scrape_role(role: str, nkparam: str, location: str = "India") -> list[di
     print(f"  [Naukri API] Scraping: {role} | location: {location}")
 
     while len(jobs) < config.MAX_JOBS_PER_SEARCH:
-        if os.path.exists("scraping_stop.flag"):
+        if os.path.exists(config.STOP_FLAG):
             print("  [Naukri] Stop signal received."); break
         params = {
             "noOfResults": per_page,
@@ -209,7 +209,7 @@ def fallback_selenium_scrape(role: str, location: str = "India") -> list[dict]:
 
     try:
         while len(jobs) < config.MAX_JOBS_PER_SEARCH:
-            if os.path.exists("scraping_stop.flag"):
+            if os.path.exists(config.STOP_FLAG):
                 print("  [Naukri] Stop signal received."); break
             role_slug = role.lower().replace(" ", "-")
             url = f"https://www.naukri.com/{role_slug}-jobs-in-{loc_slug}-{page}"
@@ -266,7 +266,7 @@ def fallback_selenium_scrape(role: str, location: str = "India") -> list[dict]:
 def scrape(roles: list[str], location: str = "India") -> list[dict]:
     all_jobs = []
     for role in roles:
-        if os.path.exists("scraping_stop.flag"):
+        if os.path.exists(config.STOP_FLAG):
             print("  [Naukri] Stop signal received."); break
         # Skip API attempt entirely — go straight to Selenium fallback
         print(f"  [Naukri] No nkparam, using Selenium fallback.")

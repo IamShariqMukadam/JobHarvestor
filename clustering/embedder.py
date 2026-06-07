@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 MODEL_NAME = "all-MiniLM-L6-v2"
-EMBEDDINGS_CACHE = "data/embeddings.npy"
+EMBEDDINGS_CACHE = os.path.join(os.getenv("JH_SESSION_DIR","data"), "embeddings.npy")
 
 
 def get_embeddings(texts: list[str], force_recompute=False) -> np.ndarray:

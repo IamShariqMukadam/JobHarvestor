@@ -12,6 +12,32 @@ from analysis.gap_analyzer import load_profiles, analyze_gap
 from utils.session_store import load_session, save_session
 from config import CSV_OUTPUT, XLSX_OUTPUT
 
+import uuid
+
+# ── Per-user session isolation ────────────────────────
+if "session_id" not in st.session_state:
+    st.session_state.session_id = uuid.uuid4().hex[:10]
+
+SESSION_DIR = f"data/sessions/{st.session_state.session_id}"
+os.makedirs(SESSION_DIR, exist_ok=True)
+os.environ["JH_SESSION_DIR"] = SESSION_DIR   # inherited by all subprocesses
+# ─────────────────────────────────────────────────────
+
+def _cleanup_old_sessions(max_age_hours=24):
+    sessions_dir = "data/sessions"
+    if not os.path.exists(sessions_dir):
+        return
+    now = time.time()
+    for sid in os.listdir(sessions_dir):
+        path = os.path.join(sessions_dir, sid)
+        if os.path.isdir(path):
+            age = now - os.path.getmtime(path)
+            if age > max_age_hours * 3600:
+                import shutil
+                shutil.rmtree(path, ignore_errors=True)
+
+_cleanup_old_sessions()
+
 
 st.set_page_config(
     page_title="JobHarvestor",
@@ -111,10 +137,8 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !imp
 /* ── SIDEBAR RADIO THEME TOGGLE — hidden, JS-driven ── */
 section[data-testid="stSidebar"] .stRadio{{
   height:0 !important;overflow:hidden !important;
-  margin:0 !important;padding:0 !important;
-  opacity:0 !important;position:absolute !important;
+  margin:0 !important;padding:0 !important;opacity:0 !important;
 }}
-
 # /* ── SIDEBAR RADIO THEME TOGGLE ── */
 # section[data-testid="stSidebar"] .stRadio{{
 #   display:flex !important;justify-content:center !important;
@@ -729,8 +753,9 @@ stc.html("""<script>
 
 
 @st.cache_data(ttl=0)
-def load_jobs_df():
-    return pd.read_csv(CSV_OUTPUT)
+def load_jobs_df(session_dir=None):
+    path = os.path.join(session_dir or SESSION_DIR, "JobHarvestor.csv")
+    return pd.read_csv(path)
 
 
 def apply_plotly_theme(fig, height=None):
@@ -915,7 +940,7 @@ with st.sidebar:
     _is_dark = st.session_state.jh_theme == "dark"
     stc.html(f"""
     <style>
-    .jh-ios-wrap{{display:flex;justify-content:center;margin:6px 0 14px}}
+    .jh-ios-wrap{{display:flex;justify-content:center;margin:-6px 0 10px}}
     .jh-ios{{
     width:64px;height:32px;border-radius:999px;cursor:pointer;
     border:2px solid {"#484848" if _is_dark else "#F0C040"};
@@ -1106,7 +1131,7 @@ if scrape_btn and st.session_state.custom_roles:
 
     os.makedirs("data", exist_ok=True)
 
-    with open("data/scrape_config_override.json", "w") as f:
+    with open(os.path.join(SESSION_DIR, "scrape_config_override.json"), "w") as f:
         json.dump({
             "roles": roles,
             "max_jobs": n_jobs,
@@ -1248,10 +1273,10 @@ if analyze_btn:
         time.sleep(2)
         st.rerun()
 
-_BG_RUNNING = "data/.bg_running"
-_BG_DONE = "data/.bg_done"
-_BG_STOP = "scraping_stop.flag"
-_BG_PHASE = "scraping_phase.txt"
+_BG_RUNNING = os.path.join(SESSION_DIR, ".bg_running")
+_BG_DONE    = os.path.join(SESSION_DIR, ".bg_done")
+_BG_STOP    = os.path.join(SESSION_DIR, "scraping_stop.flag")
+_BG_PHASE   = os.path.join(SESSION_DIR, "scraping_phase.txt")
 
 
 def _start_background_scrape(role, location="India"):
@@ -1263,7 +1288,7 @@ def _start_background_scrape(role, location="India"):
     if os.path.exists(_BG_DONE):
         os.remove(_BG_DONE)
 
-    with open("data/scrape_config_override.json", "w") as f:
+    with open(os.path.join(SESSION_DIR, "scrape_config_override.json"), "w") as f:
         json.dump({"roles": [role], "max_jobs": 30, "locations": [location]}, f)
 
     with open(_BG_RUNNING, "w") as f:
@@ -1715,7 +1740,7 @@ with tab2:
     st.markdown('''<div class="section-header"><span class="section-title">Skill Signals</span></div><p class="section-cap">What skills actually appear in JDs — real demand vs boilerplate filler</p>''', unsafe_allow_html=True)
 
     try:
-        df = load_jobs_df()
+        df = load_jobs_df(SESSION_DIR)
 
         c1, c2, c3 = st.columns(3, gap="large")
 
@@ -1848,7 +1873,7 @@ with tab3:
     st.caption("Each dot is one job. Similar skill requirements appear closer together.")
 
     try:
-        df = load_jobs_df()
+        df = load_jobs_df(SESSION_DIR)
 
         if "PCA_X" not in df.columns:
             st.warning("Cluster data not found. Run Scrape Jobs + Analyze to generate it.")
@@ -1981,7 +2006,7 @@ with tab4:
     }
 
     try:
-        df = load_jobs_df()
+        df = load_jobs_df(SESSION_DIR)
 
         fc1, fc2, fc3 = st.columns(3, gap="large")
 

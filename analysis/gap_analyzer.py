@@ -5,7 +5,7 @@
 import json
 import os
 
-PROFILES_FILE = "data/ground_truth_profiles.json"
+PROFILES_FILE = os.path.join(os.getenv("JH_SESSION_DIR","data"), "ground_truth_profiles.json")
 
 
 def load_profiles() -> list[dict]:
