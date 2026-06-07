@@ -16,7 +16,8 @@ import uuid
 
 # ── Per-user session isolation ────────────────────────
 if "session_id" not in st.session_state:
-    st.session_state.session_id = uuid.uuid4().hex[:10]
+    _qsid = st.query_params.get("sid", "")
+    st.session_state.session_id = _qsid if _qsid else uuid.uuid4().hex[:10]
 
 SESSION_DIR = f"data/sessions/{st.session_state.session_id}"
 os.makedirs(SESSION_DIR, exist_ok=True)
@@ -48,7 +49,7 @@ st.set_page_config(
 
 
 if "jh_theme" not in st.session_state:
-    st.session_state.jh_theme = "dark"
+    st.session_state.jh_theme = st.query_params.get("jh_theme", "dark")
 
 # if "jh_theme_radio" in st.session_state:
 #     _rval = str(st.session_state.jh_theme_radio)
@@ -132,11 +133,7 @@ hr{{border-color:var(--bd) !important;margin:1.4rem 0 !important}}
 section[data-testid="stSidebar"]{{background:var(--bg-2) !important;border-right:1px solid var(--bd) !important}}
 section[data-testid="stSidebar"]>div{{background:transparent !important;padding-top:.3rem !important}}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
-/* ── SIDEBAR THEME TOGGLE ── */
-section[data-testid="stSidebar"] .element-container:has(.stToggle){{display:flex !important;justify-content:center !important;width:100% !important;margin:10px 0 16px !important}}
-section[data-testid="stSidebar"] .stToggle{{display:inline-flex !important;justify-content:center !important}}
-section[data-testid="stSidebar"] .stToggle label{{display:inline-flex !important;align-items:center !important;gap:10px !important;zoom:1.65 !important}}
-section[data-testid="stSidebar"] .stToggle p{{font-family:var(--f-mono) !important;font-size:1rem !important;color:var(--tx-m) !important;margin:0 !important}}
+/* ── SIDEBAR THEME TOGGLE — now pure HTML <a> element, no CSS needed ── */
 
 
 # /* ── SIDEBAR RADIO THEME TOGGLE — hidden, JS-driven ── */
@@ -958,10 +955,33 @@ with st.sidebar:
 """, unsafe_allow_html=True)
     # ── Theme toggle ──────────────────────────────────────
     _is_dark = st.session_state.jh_theme == "dark"
-    _toggled = st.toggle("🌙  Dark" if _is_dark else "☀️  Light", value=_is_dark, key="jh_theme_tog")
-    if _toggled != _is_dark:
-        st.session_state.jh_theme = "dark" if _toggled else "light"
-        st.rerun()
+    _next    = "light" if _is_dark else "dark"
+    _sid     = st.session_state.session_id
+    _pill_bg = "#F0C040" if _is_dark else "rgba(237,233,224,.18)"
+    _pill_bd = "rgba(240,192,64,.55)" if _is_dark else "rgba(237,233,224,.22)"
+    _knob_bg = "#080808" if _is_dark else "#EDE9E0"
+    _knob_l  = "28px"   if _is_dark else "3px"
+    _tx_col  = "rgba(237,233,224,.62)" if _is_dark else "rgba(12,12,10,.55)"
+    _icon    = "🌙" if _is_dark else "☀️"
+    _lbl     = "Dark"   if _is_dark else "Light"
+    st.markdown(f"""
+<div style="display:flex;justify-content:center;margin:14px 0 20px;">
+  <a href="?jh_theme={_next}&sid={_sid}" style="text-decoration:none;">
+    <span style="display:inline-flex;align-items:center;gap:13px;cursor:pointer;
+                 font-family:'DM Mono',monospace;font-size:1.08rem;font-weight:500;
+                 color:{_tx_col};letter-spacing:.02em;user-select:none;">
+      <span style="width:54px;height:30px;background:{_pill_bg};border-radius:999px;
+                   border:1.5px solid {_pill_bd};position:relative;
+                   display:inline-block;flex-shrink:0;vertical-align:middle;">
+        <span style="position:absolute;width:22px;height:22px;background:{_knob_bg};
+                     border-radius:50%;top:3px;left:{_knob_l};
+                     box-shadow:0 1px 5px rgba(0,0,0,.45);display:block;"></span>
+      </span>
+      {_icon}&nbsp;&nbsp;{_lbl}
+    </span>
+  </a>
+</div>
+""", unsafe_allow_html=True)
 
     st.markdown("**Target Roles**")
     st.markdown('<p style="font-size:.75rem;color:var(--tx);opacity:.75;margin-top:-6px;margin-bottom:10px">Any profession — Data Analyst, Lawyer, Developer...</p>', unsafe_allow_html=True)
