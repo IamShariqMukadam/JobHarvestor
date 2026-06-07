@@ -1,26 +1,27 @@
 # agent/state.py
-# LangGraph requires a typed state dict that flows through all nodes
-# Each node reads from and writes to this state
+# AgentState TypedDict — flows through all LangGraph nodes.
+# messages uses operator.add (list concatenation) as the reducer,
+# so each node's returned messages are appended to the running list.
 
 from typing import TypedDict, Annotated
 import operator
 
 
 class AgentState(TypedDict):
-    # Input
+    # Conversation messages — append-only via operator.add reducer
+    messages: Annotated[list, operator.add]
+
+    # Optional context populated by tools / caller
     role:         str
     target_tier:  str
     user_skills:  list[str]
 
-    # Populated by tools
+    # Pipeline outputs
     raw_jobs:     list[dict]
     jd_texts:     list[str]
-    extracted:    list[dict]    # LLM extraction results per JD
-    cluster_data: dict          # cluster profiles
-    gap_report:   dict          # final gap analysis
-
-    # Agent messaging — Annotated[list, operator.add] means append-only
-    messages:     Annotated[list, operator.add]
+    extracted:    list[dict]   # per-JD LLM extraction results
+    cluster_data: dict         # cluster profiles
+    gap_report:   dict         # final gap analysis
 
     # Control flow
     error:        str

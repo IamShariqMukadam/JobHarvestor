@@ -72,6 +72,9 @@ JD_MAX_DELAY = 6
 CHECKPOINT_EVERY = 25
 
 # Naukri API
+# Companies to exclude from results (case-insensitive substring match).
+# Override at runtime via Streamlit sidebar → saved to scrape_config_override.json
+BANNED_COMPANIES: list[str] = []
+
 NAUKRI_API = "https://www.naukri.com/jobapi/v3/search"
 NAUKRI_BASE = "https://www.naukri.com"
-

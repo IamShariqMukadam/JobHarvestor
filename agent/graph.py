@@ -1,49 +1,29 @@
 # agent/graph.py
-# Proper conversational ReAct agent — NOT a one-shot pipeline
-# run_chat_turn() handles one user message, returns response + updated history
-# History is a list of LangChain message objects persisted in st.session_state
+# LangGraph StateGraph ReAct agent
+# Nodes: agent_node ↔ tool_node
+# Edges: conditional routing — has tool_calls → tools, else END
+# MemorySaver checkpointer persists multi-turn state per thread_id
 
-import json
-import re as _re
 import os
+import re as _re
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, ToolMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
+from agent.state import AgentState
 from agent.tools import (
     search_jobs_tool, extract_skills_tool,
-    cluster_analysis_tool, gap_analysis_tool
+    cluster_analysis_tool, gap_analysis_tool,
 )
 
 load_dotenv()
 
-# ── Tools registry ────────────────────────────────────────────────────────────
-TOOLS     = [search_jobs_tool, extract_skills_tool, cluster_analysis_tool, gap_analysis_tool]
-TOOLS_MAP = {t.name: t for t in TOOLS}
-def extract_role_from_message(text: str) -> str | None:
-    """
-    LangGraph-side role extractor.
-    Used by the graph state to seed 'role' without waiting for LLM.
-    """
-    _KNOWN = [
-        "data analyst","data scientist","data engineer","business analyst",
-        "software engineer","software developer","flutter developer",
-        "react developer","python developer","java developer","frontend developer",
-        "backend developer","full stack developer","machine learning engineer",
-        "ml engineer","ai engineer","product manager","devops engineer",
-    ]
-    tl = text.lower()
-    for r in _KNOWN:
-        if r in tl:
-            return r.title()
-    m = _re.search(
-        r'\b([a-z]+(?:\s+[a-z]+)?)\s+'
-        r'(developer|analyst|engineer|manager|designer|scientist)\b', tl)
-    if m and m.group(1) not in ("a","the","any","software"):
-        return (m.group(1) + " " + m.group(2)).title()
-    return None
+# ── Tool registry ─────────────────────────────────────────────────────────────
+TOOLS = [search_jobs_tool, extract_skills_tool, cluster_analysis_tool, gap_analysis_tool]
 
-
-# ── System prompt: conversational, question-driven ────────────────────────────
+# ── System prompt ─────────────────────────────────────────────────────────────
 SYSTEM_PROMPT = """You are JobHarvestor, an AI job market intelligence agent. You help people understand what the job market actually demands — with real percentages from scraped job descriptions — and give them a personalized skill gap analysis.
 
 YOU ARE CONVERSATIONAL. You ask questions one at a time. You DO NOT dump all analysis at once.
@@ -67,7 +47,7 @@ LOCATION RULES (CRITICAL):
 
 TOOL CALLING RULES:
 - search_jobs_tool: call only after BOTH role AND location are confirmed
-- extract_skills_tool: call after role is confirmed  
+- extract_skills_tool: call after role is confirmed
 - cluster_analysis_tool: call after tier is confirmed
 - gap_analysis_tool: call ONLY after user has shared their skills — use EXACTLY what they said
 - Never call the same tool twice with the same args
@@ -83,74 +63,132 @@ CONVERSATION RULES:
 TONE: Warm, direct, data-driven. Like a career coach who actually looked at the data."""
 
 
-# ── LLM factory ──────────────────────────────────────────────────────────────
+# ── LLM factory ───────────────────────────────────────────────────────────────
 def _get_llm():
     return ChatGroq(
         model="llama-3.3-70b-versatile",
         api_key=os.getenv("GROQ_API_KEY"),
-        temperature=0.3
+        temperature=0.3,
     ).bind_tools(TOOLS)
 
 
-# ── Core conversational turn ──────────────────────────────────────────────────
-def run_chat_turn(user_message: str, history: list) -> tuple[str, list]:
+# ── Graph nodes ───────────────────────────────────────────────────────────────
+def _agent_node(state: AgentState) -> dict:
     """
-    Process one user message through the agent.
+    Calls LLM with full message history.
+    System prompt prepended at call time — not stored in state.
+    """
+    messages = list(state["messages"])
+    llm_input = [SystemMessage(content=SYSTEM_PROMPT)] + messages
+    response = _get_llm().invoke(llm_input)
+    return {"messages": [response]}
+
+
+def _should_continue(state: AgentState):
+    """
+    Conditional routing:
+    - has tool_calls → execute tools
+    - no tool_calls  → end this turn
+    """
+    last_msg = state["messages"][-1]
+    if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+        return "tools"
+    return END
+
+
+# ── Graph singleton ───────────────────────────────────────────────────────────
+_checkpointer = MemorySaver()
+_compiled_graph = None
+
+
+def _get_graph():
+    global _compiled_graph
+    if _compiled_graph is not None:
+        return _compiled_graph
+
+    builder = StateGraph(AgentState)
+
+    # Nodes
+    builder.add_node("agent", _agent_node)
+    builder.add_node("tools", ToolNode(TOOLS))
+
+    # Entry
+    builder.set_entry_point("agent")
+
+    # Edges
+    builder.add_conditional_edges(
+        "agent",
+        _should_continue,
+        {"tools": "tools", END: END},
+    )
+    builder.add_edge("tools", "agent")   # after tools → back to agent
+
+    _compiled_graph = builder.compile(checkpointer=_checkpointer)
+    return _compiled_graph
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+def run_chat_turn(
+    user_message: str,
+    history: list,
+    thread_id: str = "default",
+) -> tuple[str, list]:
+    """
+    Process one user turn through the LangGraph StateGraph agent.
 
     Args:
-        user_message: what the user just typed
-        history: list of LangChain message objects from previous turns
-                 (starts empty, grows each turn — persisted in st.session_state)
+        user_message : text from the user
+        history      : kept for backward-compat; LangGraph manages state
+                       internally via MemorySaver + thread_id
+        thread_id    : unique ID per conversation session
 
     Returns:
-        (response_text, updated_history)
-
-    The agent loop:
-        invoke LLM → if tool_calls → execute tools → append ToolMessages → invoke again
-        Repeat until LLM returns a plain text response (no tool calls).
+        (response_text, updated_messages_list)
     """
-    llm = _get_llm()
+    graph = _get_graph()
+    config = {"configurable": {"thread_id": thread_id}}
 
-    # Initialize history with system prompt on first turn
-    if not history:
-        history = [SystemMessage(content=SYSTEM_PROMPT)]
+    result = graph.invoke(
+        {"messages": [HumanMessage(content=user_message)]},
+        config=config,
+    )
 
-    history.append(HumanMessage(content=user_message))
+    messages = result.get("messages", [])
 
-    # ReAct loop — max 10 iterations to prevent infinite loops
+    # Find the last plain AI response (no pending tool calls)
     final_content = ""
-    for iteration in range(10):
-        response = llm.invoke(history)
-        history.append(response)
-
-        # No tool calls → agent is done for this turn
-        if not (hasattr(response, "tool_calls") and response.tool_calls):
-            final_content = response.content
+    for msg in reversed(messages):
+        if isinstance(msg, AIMessage) and not getattr(msg, "tool_calls", None):
+            final_content = msg.content
             break
 
-        # Execute each tool call and append results
-        for tc in response.tool_calls:
-            tool_name = tc.get("name", "")
-            tool_args = tc.get("args", {})
-            tool_call_id = tc.get("id", f"call_{iteration}")
-
-            try:
-                if tool_name in TOOLS_MAP:
-                    result = TOOLS_MAP[tool_name].invoke(tool_args)
-                    result_str = str(result) if not isinstance(result, str) else result
-                else:
-                    result_str = json.dumps({"error": f"Unknown tool: {tool_name}"})
-            except Exception as e:
-                result_str = json.dumps({"error": str(e), "tool": tool_name})
-
-            history.append(
-                ToolMessage(content=result_str, tool_call_id=tool_call_id)
-            )
-
-    return final_content, history
+    return final_content, messages
 
 
-# ── Greeting message ──────────────────────────────────────────────────────────
+# ── Helper ────────────────────────────────────────────────────────────────────
+def extract_role_from_message(text: str) -> str | None:
+    _KNOWN = [
+        "data analyst", "data scientist", "data engineer", "business analyst",
+        "software engineer", "software developer", "flutter developer",
+        "react developer", "python developer", "java developer",
+        "frontend developer", "backend developer", "full stack developer",
+        "machine learning engineer", "ml engineer", "ai engineer",
+        "product manager", "devops engineer",
+    ]
+    tl = text.lower()
+    for r in _KNOWN:
+        if r in tl:
+            return r.title()
+    m = _re.search(
+        r'\b([a-z]+(?:\s+[a-z]+)?)\s+'
+        r'(developer|analyst|engineer|manager|designer|scientist)\b', tl
+    )
+    if m and m.group(1) not in ("a", "the", "any", "software"):
+        return (m.group(1) + " " + m.group(2)).title()
+    return None
+
+
+# ── Greeting ──────────────────────────────────────────────────────────────────
 GREETING = (
     "👋 Hi! I'm **JobHarvestor**, your AI job market intelligence agent.\n\n"
     "I analyze real job postings scraped from LinkedIn, Naukri, and Internshala "
@@ -161,23 +199,25 @@ GREETING = (
     "• Give you a **readiness score** vs what the market requires\n"
     "• Build a **ranked learning roadmap** based on your skill gaps\n\n"
     "**What role are you looking to explore, and which city?**\n"
-    "*(e.g. \"Data Analyst in Pune\", \"Flutter Developer in Bangalore\", \"ML Engineer remote\" — any role + location works)*"
+    "*(e.g. \"Data Analyst in Pune\", \"Flutter Developer in Bangalore\", "
+    "\"ML Engineer remote\" — any role + location works)*"
 )
 
 
-# ── Legacy one-shot mode (kept for backward compat) ───────────────────────────
-def run_agent(role: str, user_skills: list[str], target_tier: str, location: str = "India") -> dict:
-    """
-    One-shot mode. Kept so existing sidebar analyze button still works.
-    Internally uses run_chat_turn with a constructed query.
-    """
+# ── Legacy one-shot mode (backward compat) ────────────────────────────────────
+def run_agent(
+    role: str,
+    user_skills: list[str],
+    target_tier: str,
+    location: str = "India",
+) -> dict:
     user_skills_str = ", ".join(user_skills)
     query = (
         f"Please analyze '{role}' jobs for someone targeting {target_tier} companies. "
         f"My current skills are: {user_skills_str}. "
         f"Search the jobs, extract market skill requirements, and run a gap analysis for me."
     )
-    response_text, _ = run_chat_turn(query, [])
+    response_text, _ = run_chat_turn(query, [], thread_id="legacy_oneshot")
 
     gap_data = None
     try:

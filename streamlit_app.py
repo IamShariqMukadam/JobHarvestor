@@ -830,6 +830,7 @@ def persist():
         "location": st.session_state.location,
         "custom_roles": st.session_state.custom_roles,
         "jobs_per_platform": st.session_state.jobs_per_plat,
+        "banned_companies": st.session_state.get("banned_companies", []),
     })
 
 
@@ -936,8 +937,12 @@ if "session_loaded" not in st.session_state:
     st.session_state.location = saved.get("location", "India")
     st.session_state.custom_roles = saved.get("custom_roles", [])
     st.session_state.jobs_per_plat = saved.get("jobs_per_platform", 50)
+    st.session_state.banned_companies = saved.get("banned_companies", [])
     st.session_state.agent_result = None
     st.session_state.session_loaded = True
+
+if "agent_thread_id" not in st.session_state:
+    st.session_state.agent_thread_id = uuid.uuid4().hex
 
 
 with st.sidebar:
@@ -1042,6 +1047,21 @@ with st.sidebar:
 
     if loc != st.session_state.location:
         st.session_state.location = loc
+        persist()
+
+    st.markdown("**Banned Companies**")
+    st.markdown('<p style="font-size:.75rem;color:var(--tx);opacity:.75;margin-top:-6px;margin-bottom:6px">Exclude from all results</p>', unsafe_allow_html=True)
+    _banned_raw = st.text_area(
+        "Banned",
+        value=", ".join(st.session_state.get("banned_companies", [])),
+        placeholder="TCS, Infosys, Wipro...",
+        height=60,
+        label_visibility="collapsed",
+        key="banned_input",
+    )
+    _banned_list = [c.strip() for c in _banned_raw.split(",") if c.strip()]
+    if _banned_list != st.session_state.get("banned_companies", []):
+        st.session_state.banned_companies = _banned_list
         persist()
 
     tier_opts = ["All", "Mid-market", "Tier-1", "Series A / Startup"]
@@ -1149,6 +1169,7 @@ if scrape_btn and st.session_state.custom_roles:
             "roles": roles,
             "max_jobs": n_jobs,
             "locations": [l.strip() for l in loc_v.split(",") if l.strip()],
+            "banned_companies": st.session_state.get("banned_companies", []),
         }, f)
 
     import config as _c
@@ -1498,6 +1519,7 @@ with tab1:
         if st.button("↺  New Conversation", use_container_width=True):
             st.session_state.chat_msgs = []
             st.session_state.agent_history = []
+            st.session_state.agent_thread_id = uuid.uuid4().hex
 
             for _flag in [_BG_RUNNING, _BG_DONE, _BG_STOP, _BG_PHASE]:
                 try:
@@ -1713,6 +1735,7 @@ with tab1:
                         response_text, updated_history = run_chat_turn(
                             user_input,
                             st.session_state.agent_history,
+                            thread_id=st.session_state.get("agent_thread_id", "default"),
                         )
 
                         st.session_state.agent_history = updated_history
@@ -2095,6 +2118,38 @@ with tab4:
 
         st.divider()
 
+        # ── Jobs You Can Apply Now ─────────────────────────────────
+        _user_skill_set = {
+            s.strip().lower()
+            for s in st.session_state.skills_input.split(",")
+            if s.strip()
+        }
+        df_j = df_j.copy()
+
+        def _compute_match(row):
+            sk = str(row.get("Skills Required", "N/A"))
+            if sk in ["N/A", "nan", ""]:
+                return 0.0
+            job_skills = {x.strip().lower() for x in sk.split(",") if x.strip()}
+            if not job_skills or not _user_skill_set:
+                return 0.0
+            return round(len(_user_skill_set & job_skills) / len(job_skills) * 100, 1)
+
+        df_j["_match"] = df_j.apply(_compute_match, axis=1)
+
+        if _user_skill_set:
+            _can_apply_count = int((df_j["_match"] >= 60).sum())
+            _qa_col, _ = st.columns([2, 3])
+            with _qa_col:
+                _show_qualifying = st.checkbox(
+                    f"🎯 Jobs I qualify for ({_can_apply_count} found)",
+                    key="jb_qualify_filter",
+                )
+            if _show_qualifying:
+                df_j = df_j[df_j["_match"] >= 60]
+        else:
+            _show_qualifying = False
+
         changed = False
 
         for loop_i, (_, row) in enumerate(df_j.head(100).iterrows()):
@@ -2106,10 +2161,12 @@ with tab4:
             stat = str(row.get("Status", "To Apply"))
             emoji = STATUS_EMOJI.get(stat, "○")
 
+            _match_val = row.get("_match", 0.0)
+            _apply_badge = f" · 🎯 {_match_val:.0f}% match" if _match_val >= 60 and _user_skill_set else ""
             with st.expander(
                 f"{emoji} {row.get('Title', 'N/A')} - "
                 f"{row.get('Company', 'N/A')} - "
-                f"{row.get('Location', 'N/A')}"
+                f"{row.get('Location', 'N/A')}{_apply_badge}"
             ):
                 d1, d2 = st.columns([3, 1], gap="large")
 

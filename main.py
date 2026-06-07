@@ -14,9 +14,10 @@ def run():
     if os.path.exists(_override):
         with open(_override) as f:
             ov = _json.load(f)
-        _cfg.ROLES = ov.get("roles", _cfg.ROLES)
-        _cfg.MAX_JOBS_PER_SEARCH = ov.get("max_jobs", _cfg.MAX_JOBS_PER_SEARCH)
-        _cfg.TARGET_LOCATIONS = ov.get("locations", _cfg.TARGET_LOCATIONS)
+        _cfg.ROLES               = ov.get("roles",            _cfg.ROLES)
+        _cfg.MAX_JOBS_PER_SEARCH = ov.get("max_jobs",         _cfg.MAX_JOBS_PER_SEARCH)
+        _cfg.TARGET_LOCATIONS    = ov.get("locations",        _cfg.TARGET_LOCATIONS)
+        _cfg.BANNED_COMPANIES    = ov.get("banned_companies", _cfg.BANNED_COMPANIES)
 
     print(f"[DEBUG] Roles: {_cfg.ROLES}")
     print(f"[DEBUG] Max jobs: {_cfg.MAX_JOBS_PER_SEARCH}")
@@ -27,37 +28,42 @@ def run():
     print(f"[DEBUG] Active location for scrape: {_location}")
 
     all_jobs = []
+    USE_CONCURRENT = _cfg.MAX_JOBS_PER_SEARCH < 50
+    mode = "concurrent" if USE_CONCURRENT else "sequential"
     print("=" * 55)
-    print("  JobHarvestor — Day 1")
+    print(f"  JobHarvestor — Day 1  [{mode}]")
     print("=" * 55)
 
-    # Sequential — more reliable than concurrent
-    if "internshala" in _cfg.PLATFORMS:
-        print("\n[1/3] Internshala...")
-        try:
-            jobs = internshala.scrape(_cfg.ROLES, location=_location)
-            all_jobs.extend(jobs)
-            print(f"  ✓ Internshala: {len(jobs)} jobs")
-        except Exception as e:
-            print(f"  ✗ Internshala failed: {e}")
+    def _scrape_platform(platform: str) -> list:
+        if platform == "internshala":
+            return internshala.scrape(_cfg.ROLES, location=_location)
+        elif platform == "naukri":
+            return naukri.scrape(_cfg.ROLES, location=_location)
+        elif platform == "linkedin":
+            return linkedin.scrape(_cfg.ROLES, location=_location)
+        return []
 
-    if "naukri" in _cfg.PLATFORMS:
-        print("\n[2/3] Naukri...")
-        try:
-            jobs = naukri.scrape(_cfg.ROLES, location=_location)
-            all_jobs.extend(jobs)
-            print(f"  ✓ Naukri: {len(jobs)} jobs")
-        except Exception as e:
-            print(f"  ✗ Naukri failed: {e}")
-
-    if "linkedin" in _cfg.PLATFORMS:
-        print("\n[3/3] LinkedIn...")
-        try:
-            jobs = linkedin.scrape(_cfg.ROLES, location=_location)
-            all_jobs.extend(jobs)
-            print(f"  ✓ LinkedIn: {len(jobs)} jobs")
-        except Exception as e:
-            print(f"  ✗ LinkedIn failed: {e}")
+    if USE_CONCURRENT:
+        print(f"\n  Scraping {len(_cfg.PLATFORMS)} platforms concurrently...")
+        with ThreadPoolExecutor(max_workers=len(_cfg.PLATFORMS)) as executor:
+            future_map = {executor.submit(_scrape_platform, p): p for p in _cfg.PLATFORMS}
+            for future in as_completed(future_map):
+                p = future_map[future]
+                try:
+                    jobs = future.result()
+                    all_jobs.extend(jobs)
+                    print(f"  ✓ {p.title()}: {len(jobs)} jobs")
+                except Exception as e:
+                    print(f"  ✗ {p} failed: {e}")
+    else:
+        for i, platform in enumerate(_cfg.PLATFORMS):
+            print(f"\n[{i+1}/{len(_cfg.PLATFORMS)}] {platform.title()}...")
+            try:
+                jobs = _scrape_platform(platform)
+                all_jobs.extend(jobs)
+                print(f"  ✓ {platform.title()}: {len(jobs)} jobs")
+            except Exception as e:
+                print(f"  ✗ {platform} failed: {e}")
 
     if not all_jobs:
         print("\n[!] No jobs collected.")

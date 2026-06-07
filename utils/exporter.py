@@ -1,5 +1,6 @@
 # utils/exporter.py
 
+import re
 import pandas as pd
 import os
 from openpyxl import load_workbook
@@ -26,7 +27,8 @@ def save_csv(jobs: list[dict]):
     else:
         df = df_new.drop_duplicates(subset=["URL", "Title", "Company"])
 
-    df = filter_locations(df)   # ← only line added inside save_csv
+    df = filter_locations(df)
+    df = filter_banned_companies(df)
 
     df.to_csv(CSV_OUTPUT, index=False)
     print(f"\n  [CSV] {len(df)} jobs → {CSV_OUTPUT}")
@@ -41,6 +43,24 @@ def filter_locations(df: pd.DataFrame) -> pd.DataFrame:
     filtered = df[mask].copy()
     print(f"  [Filter] {len(df)} → {len(filtered)} jobs after location filter")
     return filtered
+
+def filter_banned_companies(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Removes rows whose Company contains any BANNED_COMPANIES substring.
+    Runtime-overridable via scrape_config_override.json.
+    """
+    from config import BANNED_COMPANIES
+    terms = [c.strip() for c in BANNED_COMPANIES if c.strip()]
+    if not terms:
+        return df
+    pattern = "|".join(re.escape(t) for t in terms)
+    mask = ~df["Company"].str.contains(pattern, case=False, na=False, regex=True)
+    filtered = df[mask].copy()
+    removed = len(df) - len(filtered)
+    if removed:
+        print(f"  [Filter] Removed {removed} jobs from banned companies")
+    return filtered
+
 
 def style_header(ws, hex_color):
     fill = PatternFill("solid", fgColor=hex_color)
