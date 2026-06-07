@@ -634,16 +634,19 @@ stc.html("""<script>
             user-select: none;
             box-shadow: 3px 0 22px rgba(240,192,64,.35);
             transform: translateY(-50%);
-            animation: jh-nudge 1.8s ease-in-out 0.8s 4;
-            transition: background .18s, box-shadow .18s;
+            transition: left .28s cubic-bezier(.4,0,.2,1),
+                        background .18s, box-shadow .18s;
           }
           #jh-sidebar-tog:hover {
             background: #E0AA3E;
             box-shadow: 3px 0 32px rgba(240,192,64,.55);
           }
+          #jh-sidebar-tog.nudge {
+            animation: jh-nudge 1.8s ease-in-out 0.5s 4;
+          }
           @keyframes jh-nudge {
-            0%,100% { left: 0px; }
-            50%      { left: 7px; }
+            0%,100% { left: var(--jh-base-left, 0px); }
+            50%      { left: calc(var(--jh-base-left, 0px) + 7px); }
           }
         `;
         doc.head.appendChild(s);
@@ -655,35 +658,49 @@ stc.html("""<script>
       var btn = doc.createElement('div');
       btn.id = 'jh-sidebar-tog';
 
-      function isSidebarOpen() {
+      function getSidebarWidth() {
         var sb = doc.querySelector('section[data-testid="stSidebar"]');
-        if (!sb) return false;
-        var w = window.parent.getComputedStyle(sb).width;
-        return parseInt(w) > 50;
+        if (!sb) return 0;
+        return parseInt(window.parent.getComputedStyle(sb).width) || 0;
       }
 
-      function updateIcon() {
-        btn.textContent = isSidebarOpen() ? '\u2039' : '\u203a';
+      function updateBtn() {
+        var w = getSidebarWidth();
+        var isOpen = w > 50;
+        btn.textContent = isOpen ? '\u2039' : '\u203a';
+        /* slide button to hug the sidebar's right edge */
+        btn.style.left = (isOpen ? w : 0) + 'px';
+        btn.style.setProperty('--jh-base-left', (isOpen ? w : 0) + 'px');
       }
 
-      updateIcon();
+      /* initial state + nudge hint for closed sidebar */
+      updateBtn();
+      btn.classList.add('nudge');
+      btn.addEventListener('animationend', function() {
+        btn.classList.remove('nudge');
+      });
 
       btn.onclick = function() {
-        /* click the native (hidden) toggle button */
+        /* briefly un-hide the native button so the click registers with Streamlit */
         var native =
           doc.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
           doc.querySelector('[data-testid="collapsedControl"] button') ||
           doc.querySelector('section[data-testid="stSidebar"] button[aria-label="Close sidebar"]') ||
           doc.querySelector('[data-testid="stSidebarHeader"] button');
         if (native) {
-          native.style.display = '';   /* unhide briefly so it's clickable */
+          native.style.cssText = 'display:flex!important';
           native.click();
-          native.style.display = 'none';
+          setTimeout(function() { native.style.cssText = ''; }, 50);
         }
-        setTimeout(updateIcon, 350);
+        /* update position after sidebar animates */
+        setTimeout(updateBtn, 150);
+        setTimeout(updateBtn, 400);
       };
 
       doc.body.appendChild(btn);
+
+      /* poll to keep button in sync with sidebar (handles rerun-triggered state changes) */
+      setInterval(updateBtn, 500);
 
     } catch(e) { /* cross-origin guard — skip silently */ }
   }
