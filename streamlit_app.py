@@ -168,15 +168,6 @@ section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !imp
 # }}
 # section[data-testid="stSidebar"] .stRadio input{{display:none !important}}
 # section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"]{{display:none !important}}
-/* ── SIDEBAR THEME TOGGLE ── */
-section[data-testid="stSidebar"] [data-testid="stToggle"]{{
-  display:flex !important;justify-content:center !important;
-  margin:-4px 0 10px !important;
-}}
-section[data-testid="stSidebar"] [data-testid="stToggle"] p{{
-  font-family:var(--f-mono) !important;font-size:.72rem !important;
-  color:var(--tx-m) !important;
-}}
 
 /* ── SIDEBAR BRAND ── */
 .sidebar-brand{{
@@ -309,6 +300,7 @@ section[data-testid="stSidebar"] [data-testid="stToggle"] p{{
 [data-testid="collapsedControl"],[data-testid="stSidebarCollapseButton"],
 [data-testid="stSidebarHeader"] button,
 section[data-testid="stSidebar"] button[aria-label="Close sidebar"]{{display:none !important}}
+section[data-testid="stSidebar"] [data-testid="stButton"]{{display:none !important}}
 
 
 
@@ -983,37 +975,34 @@ with st.sidebar:
   <div><span class="sb-tag">Market Intelligence</span></div>
 </div>
 """, unsafe_allow_html=True)
-    
-   # Theme toggle — native st.toggle, no iframe bridge needed
-    _is_dark = st.session_state.jh_theme == "dark"
-    _toggled = st.toggle(
-        "🌙  Dark" if _is_dark else "☀️  Light",
-        value=_is_dark,
-        key="jh_theme_tog"
+    st.radio(
+    "Theme", ["🌑 Dark", "☀️ Light"],
+    horizontal=True,
+    key="jh_theme_radio",
+    label_visibility="collapsed",
     )
-    if _toggled != _is_dark:
-        st.session_state.jh_theme = "dark" if _toggled else "light"
-        st.rerun()
 
+    # ── iOS-style toggle ──────────────────────────────────
+    _is_dark = st.session_state.jh_theme == "dark"
     stc.html(f"""
     <style>
-    .jh-ios-wrap{{display:flex;justify-content:center;margin:-6px 0 10px}}
+    .jh-ios-wrap{{display:flex;justify-content:left;margin:-6px 0 10px}}
     .jh-ios{{
-    width:88px;height:34px;border-radius:999px;cursor:pointer;
+    width:94px;height:32px;border-radius:999px;cursor:pointer;
     border:2px solid {"#484848" if _is_dark else "#F0C040"};
     background:{"#1a1a1a" if _is_dark else "transparent"};
-    display:flex;align-items:center;padding:4px;
+    display:flex;align-items:center;padding:3px;
     justify-content:{"flex-start" if _is_dark else "flex-end"};
-    box-shadow:{"none" if _is_dark else "0 0 18px rgba(240,192,64,.3)"};
+    box-shadow:{"none" if _is_dark else "0 0 18px rgba(240,192,64,.3),inset 0 0 0 1px rgba(240,192,64,.15)"};
     transition:all .3s cubic-bezier(.4,0,.2,1);
-    user-select:none;
     }}
     .jh-knob{{
     width:22px;height:22px;border-radius:50%;
     background:{"#484848" if _is_dark else "#F0C040"};
     display:flex;align-items:center;justify-content:center;
-    font-size:13px;line-height:1;
+    font-size:12px;line-height:1;
     box-shadow:{"inset 0 1px 3px rgba(0,0,0,.5)" if _is_dark else "0 0 12px rgba(240,192,64,.7)"};
+    transition:all .3s cubic-bezier(.4,0,.2,1);
     }}
     </style>
     <div class="jh-ios-wrap">
@@ -1023,82 +1012,17 @@ with st.sidebar:
     </div>
     <script>
     (function(){{
-    var _nativeBtn = null;
-    var _tog = document.getElementById('jh-ios-tog');
-
-    function findAndHide(){{
+    document.getElementById('jh-ios-tog').addEventListener('click',function(){{
         try{{
         var doc = window.parent.document;
-        var btn = Array.from(doc.querySelectorAll('button')).find(function(b){{
-            return b.textContent.trim() === '__JH_THEME__';
-        }});
-        if(btn){{
-            btn.style.cssText = 'position:fixed!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;overflow:hidden!important;top:-9999px!important;left:-9999px!important';
-            if(btn !== _nativeBtn){{
-            _nativeBtn = btn;
-            if(_tog){{
-                _tog.onclick = function(){{ _nativeBtn.click(); }};
-            }}
-            }}
-        }}
+        var sb = doc.querySelector('section[data-testid="stSidebar"]');
+        var radios = (sb||doc).querySelectorAll('input[type="radio"]');
+        radios.forEach(function(r){{ if(!r.checked){{ r.click(); }} }});
         }}catch(e){{}}
-    }}
-
-    findAndHide();
-    setTimeout(findAndHide, 200);
-    setTimeout(findAndHide, 600);
-    setInterval(findAndHide, 800);
+    }});
     }})();
     </script>
     """, height=48, scrolling=False)
-    # st.radio(
-    # "Theme", ["🌑 Dark", "☀️ Light"],
-    # horizontal=True,
-    # key="jh_theme_radio",
-    # label_visibility="collapsed",
-    # )
-
-    # # ── iOS-style toggle ──────────────────────────────────
-    # _is_dark = st.session_state.jh_theme == "dark"
-    # stc.html(f"""
-    # <style>
-    # .jh-ios-wrap{{display:flex;justify-content:left;margin:-6px 0 10px}}
-    # .jh-ios{{
-    # width:94px;height:32px;border-radius:999px;cursor:pointer;
-    # border:2px solid {"#484848" if _is_dark else "#F0C040"};
-    # background:{"#1a1a1a" if _is_dark else "transparent"};
-    # display:flex;align-items:center;padding:3px;
-    # justify-content:{"flex-start" if _is_dark else "flex-end"};
-    # box-shadow:{"none" if _is_dark else "0 0 18px rgba(240,192,64,.3),inset 0 0 0 1px rgba(240,192,64,.15)"};
-    # transition:all .3s cubic-bezier(.4,0,.2,1);
-    # }}
-    # .jh-knob{{
-    # width:22px;height:22px;border-radius:50%;
-    # background:{"#484848" if _is_dark else "#F0C040"};
-    # display:flex;align-items:center;justify-content:center;
-    # font-size:12px;line-height:1;
-    # box-shadow:{"inset 0 1px 3px rgba(0,0,0,.5)" if _is_dark else "0 0 12px rgba(240,192,64,.7)"};
-    # transition:all .3s cubic-bezier(.4,0,.2,1);
-    # }}
-    # </style>
-    # <div class="jh-ios-wrap">
-    # <div class="jh-ios" id="jh-ios-tog">
-    #     <div class="jh-knob">{"🌙" if _is_dark else "☀️"}</div>
-    # </div>
-    # </div>
-    # <script>
-    # (function(){{
-    # document.getElementById('jh-ios-tog').addEventListener('click',function(){{
-    #     try{{
-    #     var doc = window.parent.document;
-    #     var sb = doc.querySelector('section[data-testid="stSidebar"]');
-    #     var radios = (sb||doc).querySelectorAll('input[type="radio"]');
-    #     radios.forEach(function(r){{ if(!r.checked){{ r.click(); }} }});
-    #     }}catch(e){{}}
-    # }});
-    # }})();
-    # </script>
-    # """, height=48, scrolling=False)
 
     st.markdown("**Target Roles**")
     st.markdown('<p style="font-size:.75rem;color:var(--tx);opacity:.75;margin-top:-6px;margin-bottom:10px">Any profession — Data Analyst, Lawyer, Developer...</p>', unsafe_allow_html=True)
