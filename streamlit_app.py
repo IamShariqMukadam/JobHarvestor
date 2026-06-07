@@ -112,22 +112,27 @@ section[data-testid="stSidebar"] .stRadio{{
   display:flex !important;justify-content:center !important;
 }}
 section[data-testid="stSidebar"] .stRadio>div{{
-  flex-direction:row !important;gap:2px !important;background:var(--bg-2) !important;
-  border:1px solid var(--bd-s) !important;border-radius:999px !important;padding:3px !important;
-  margin-bottom:12px !important;display:inline-flex !important;
-  box-shadow:inset 0 1px 3px rgba(0,0,0,.35) !important;
+  flex-direction:row !important;gap:0 !important;
+  background:var(--bg-3) !important;
+  border:1.5px solid var(--bd-s) !important;
+  border-radius:999px !important;padding:3px !important;
+  margin-bottom:14px !important;display:inline-flex !important;
 }}
 section[data-testid="stSidebar"] .stRadio label{{
-  border-radius:999px !important;padding:5px 14px !important;font-family:var(--f-mono) !important;
-  font-size:.70rem !important;color:var(--tx) !important;cursor:pointer !important;
-  transition:all .16s !important;background:var(--bg-3) !important;
-  border:1px solid var(--bd) !important;
-  display:flex !important;align-items:center !important;gap:4px !important;
+  border-radius:999px !important;padding:6px 20px !important;
+  font-family:var(--f-mono) !important;font-size:.70rem !important;
+  font-weight:600 !important;color:var(--tx-m) !important;
+  cursor:pointer !important;transition:all .2s ease !important;
+  background:transparent !important;border:none !important;
+  display:flex !important;align-items:center !important;
+  gap:5px !important;letter-spacing:.04em !important;
+  user-select:none !important;white-space:nowrap !important;
 }}
 section[data-testid="stSidebar"] .stRadio label > div:first-child{{display:none !important}}
 section[data-testid="stSidebar"] .stRadio label:has(input:checked),
 section[data-testid="stSidebar"] .stRadio label[data-checked="true"]{{
-  background:var(--accent) !important;color:#080808 !important;font-weight:700 !important;
+  background:var(--accent) !important;color:#080808 !important;
+  font-weight:700 !important;box-shadow:0 1px 6px rgba(0,0,0,.25) !important;
 }}
 section[data-testid="stSidebar"] .stRadio input{{display:none !important}}
 section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"]{{display:none !important}}
@@ -195,33 +200,27 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdow
 
 /* ── SLIDER ── */
 [data-testid="stSlider"]{{--primary-color:var(--accent) !important}}
-[data-testid="stSlider"] [data-baseweb="slider"]{{padding-top:18px !important}}
-[data-testid="stSlider"] [data-baseweb="slider"]>div{{
-  background:transparent !important;border-radius:999px !important;overflow:visible !important;
-}}
+[data-testid="stSlider"] [data-baseweb="slider"]{{padding-top:20px !important}}
 [data-testid="stSlider"] [role="slider"]{{
   width:20px !important;height:20px !important;
-  background:var(--accent) !important;border:2px solid var(--bg) !important;border-radius:999px !important;
-  box-shadow:0 0 0 2px var(--accent),0 0 16px var(--accent-bg) !important;
+  background:var(--accent) !important;border:2px solid var(--bg) !important;
+  border-radius:50% !important;
+  box-shadow:0 0 0 2px var(--accent),0 0 14px var(--accent-bg) !important;
 }}
-/* Full track — grey */
-[data-testid="stSlider"] div[class*="track"],[data-testid="stSlider"] div[class*="Track"]{{
-  background:var(--bd-s) !important;
+/* Track — scoped inside baseweb slider so it never hits label containers */
+[data-testid="stSlider"] [data-baseweb="slider"] div[class*="track"],
+[data-testid="stSlider"] [data-baseweb="slider"] div[class*="Track"]{{
+  background:var(--bd-s) !important;border-radius:999px !important;overflow:hidden !important;
 }}
-/* Filled portion — accent */
-[data-testid="stSlider"] div[class*="innerTrack"],[data-testid="stSlider"] div[class*="InnerTrack"],
-[data-testid="stSlider"] div[class*="filledTrack"],[data-testid="stSlider"] div[class*="FilledTrack"]{{
-  background:var(--accent) !important;border-radius:999px !important;
+/* Tick labels — target by testid, not span wildcard bleeding into thumb tooltip */
+[data-testid="stSlider"] [data-testid="stTickBarMin"],
+[data-testid="stSlider"] [data-testid="stTickBarMax"]{{
+  color:var(--tx-m) !important;font-family:var(--f-mono) !important;
+  font-size:.72rem !important;background:transparent !important;padding:0 !important;
 }}
-/* Structural selectors for the track fill */
-[data-testid="stSlider"] [data-baseweb="slider"]>div>div:first-child{{background:var(--bd-s) !important;border-radius:999px !important}}
-[data-testid="stSlider"] [data-baseweb="slider"]>div>div:first-child>div:first-child{{background:var(--accent) !important;border-radius:999px !important}}
-[data-testid="stSlider"] [data-baseweb="slider"]>div>div:first-child>div:last-child{{background:var(--bd-s) !important;border-radius:999px !important}}
-# [data-testid="stSlider"] [data-baseweb="slider"]>div>div:nth-child(2){{background:var(--accent) !important;border-radius:999px !important}}
-/* Tick labels (min/max values like "10" and "100") — neutral, NOT accent */
 [data-testid="stSlider"] span{{
   color:var(--tx-m) !important;font-family:var(--f-mono) !important;
-  background:transparent !important;
+  background:transparent !important;padding:0 !important;
 }}
 
 /* ── BUTTONS ── */
