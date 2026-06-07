@@ -958,7 +958,7 @@ with st.sidebar:
     _is_dark = st.session_state.jh_theme == "dark"
     stc.html(f"""
     <style>
-    .jh-ios-wrap{{display:flex;justify-content:center;margin:-6px 0 10px}}
+    .jh-ios-wrap{{display:flex;justify-content:left;margin:-6px 0 10px}}
     .jh-ios{{
     width:94px;height:32px;border-radius:999px;cursor:pointer;
     border:2px solid {"#484848" if _is_dark else "#F0C040"};
