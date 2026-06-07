@@ -50,9 +50,9 @@ st.set_page_config(
 if "jh_theme" not in st.session_state:
     st.session_state.jh_theme = "dark"
 
-if "jh_theme_radio" in st.session_state:
-    _rval = str(st.session_state.jh_theme_radio)
-    st.session_state.jh_theme = "light" if "Light" in _rval else "dark"
+# if "jh_theme_radio" in st.session_state:
+#     _rval = str(st.session_state.jh_theme_radio)
+#     st.session_state.jh_theme = "light" if "Light" in _rval else "dark"
 
 
 _IS_LIGHT = st.session_state.jh_theme == "light"
@@ -134,11 +134,11 @@ section[data-testid="stSidebar"]>div{{background:transparent !important;padding-
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
 
 
-/* ── SIDEBAR RADIO THEME TOGGLE — hidden, JS-driven ── */
-section[data-testid="stSidebar"] .stRadio{{
-  height:0 !important;overflow:hidden !important;
-  margin:0 !important;padding:0 !important;opacity:0 !important;
-}}
+# /* ── SIDEBAR RADIO THEME TOGGLE — hidden, JS-driven ── */
+# section[data-testid="stSidebar"] .stRadio{{
+#   height:0 !important;overflow:hidden !important;
+#   margin:0 !important;padding:0 !important;opacity:0 !important;
+# }}
 # /* ── SIDEBAR RADIO THEME TOGGLE ── */
 # section[data-testid="stSidebar"] .stRadio{{
 #   display:flex !important;justify-content:center !important;
@@ -947,34 +947,33 @@ with st.sidebar:
   <div><span class="sb-tag">Market Intelligence</span></div>
 </div>
 """, unsafe_allow_html=True)
-    st.radio(
-    "Theme", ["🌑 Dark", "☀️ Light"],
-    horizontal=True,
-    key="jh_theme_radio",
-    label_visibility="collapsed",
-    )
-
-    # ── iOS-style toggle ──────────────────────────────────
+    
+    # Theme toggle — reliable button-based approach
     _is_dark = st.session_state.jh_theme == "dark"
+
+    if st.button("__JH_THEME__", key="jh_theme_btn"):
+        st.session_state.jh_theme = "light" if _is_dark else "dark"
+        st.rerun()
+
     stc.html(f"""
     <style>
-    .jh-ios-wrap{{display:flex;justify-content:left;margin:-6px 0 10px}}
+    .jh-ios-wrap{{display:flex;justify-content:center;margin:-6px 0 10px}}
     .jh-ios{{
-    width:94px;height:32px;border-radius:999px;cursor:pointer;
+    width:88px;height:34px;border-radius:999px;cursor:pointer;
     border:2px solid {"#484848" if _is_dark else "#F0C040"};
     background:{"#1a1a1a" if _is_dark else "transparent"};
-    display:flex;align-items:center;padding:3px;
+    display:flex;align-items:center;padding:4px;
     justify-content:{"flex-start" if _is_dark else "flex-end"};
-    box-shadow:{"none" if _is_dark else "0 0 18px rgba(240,192,64,.3),inset 0 0 0 1px rgba(240,192,64,.15)"};
+    box-shadow:{"none" if _is_dark else "0 0 18px rgba(240,192,64,.3)"};
     transition:all .3s cubic-bezier(.4,0,.2,1);
+    user-select:none;
     }}
     .jh-knob{{
     width:22px;height:22px;border-radius:50%;
     background:{"#484848" if _is_dark else "#F0C040"};
     display:flex;align-items:center;justify-content:center;
-    font-size:12px;line-height:1;
+    font-size:13px;line-height:1;
     box-shadow:{"inset 0 1px 3px rgba(0,0,0,.5)" if _is_dark else "0 0 12px rgba(240,192,64,.7)"};
-    transition:all .3s cubic-bezier(.4,0,.2,1);
     }}
     </style>
     <div class="jh-ios-wrap">
@@ -984,17 +983,74 @@ with st.sidebar:
     </div>
     <script>
     (function(){{
-    document.getElementById('jh-ios-tog').addEventListener('click',function(){{
+    var tries=0;
+    function init(){{
+        tries++;
+        if(tries>20) return;
         try{{
-        var doc = window.parent.document;
-        var sb = doc.querySelector('section[data-testid="stSidebar"]');
-        var radios = (sb||doc).querySelectorAll('input[type="radio"]');
-        radios.forEach(function(r){{ if(!r.checked){{ r.click(); }} }});
-        }}catch(e){{}}
-    }});
+        var doc=window.parent.document;
+        var btn=Array.from(doc.querySelectorAll('button')).find(function(b){{
+            return b.textContent.trim()==='__JH_THEME__';
+        }});
+        if(!btn){{ setTimeout(init,300); return; }}
+        btn.style.cssText='position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;overflow:hidden;top:-9999px';
+        document.getElementById('jh-ios-tog').addEventListener('click',function(){{
+            btn.click();
+        }});
+        }}catch(e){{ setTimeout(init,300); }}
+    }}
+    setTimeout(init,400);
     }})();
     </script>
     """, height=48, scrolling=False)
+    # st.radio(
+    # "Theme", ["🌑 Dark", "☀️ Light"],
+    # horizontal=True,
+    # key="jh_theme_radio",
+    # label_visibility="collapsed",
+    # )
+
+    # # ── iOS-style toggle ──────────────────────────────────
+    # _is_dark = st.session_state.jh_theme == "dark"
+    # stc.html(f"""
+    # <style>
+    # .jh-ios-wrap{{display:flex;justify-content:left;margin:-6px 0 10px}}
+    # .jh-ios{{
+    # width:94px;height:32px;border-radius:999px;cursor:pointer;
+    # border:2px solid {"#484848" if _is_dark else "#F0C040"};
+    # background:{"#1a1a1a" if _is_dark else "transparent"};
+    # display:flex;align-items:center;padding:3px;
+    # justify-content:{"flex-start" if _is_dark else "flex-end"};
+    # box-shadow:{"none" if _is_dark else "0 0 18px rgba(240,192,64,.3),inset 0 0 0 1px rgba(240,192,64,.15)"};
+    # transition:all .3s cubic-bezier(.4,0,.2,1);
+    # }}
+    # .jh-knob{{
+    # width:22px;height:22px;border-radius:50%;
+    # background:{"#484848" if _is_dark else "#F0C040"};
+    # display:flex;align-items:center;justify-content:center;
+    # font-size:12px;line-height:1;
+    # box-shadow:{"inset 0 1px 3px rgba(0,0,0,.5)" if _is_dark else "0 0 12px rgba(240,192,64,.7)"};
+    # transition:all .3s cubic-bezier(.4,0,.2,1);
+    # }}
+    # </style>
+    # <div class="jh-ios-wrap">
+    # <div class="jh-ios" id="jh-ios-tog">
+    #     <div class="jh-knob">{"🌙" if _is_dark else "☀️"}</div>
+    # </div>
+    # </div>
+    # <script>
+    # (function(){{
+    # document.getElementById('jh-ios-tog').addEventListener('click',function(){{
+    #     try{{
+    #     var doc = window.parent.document;
+    #     var sb = doc.querySelector('section[data-testid="stSidebar"]');
+    #     var radios = (sb||doc).querySelectorAll('input[type="radio"]');
+    #     radios.forEach(function(r){{ if(!r.checked){{ r.click(); }} }});
+    #     }}catch(e){{}}
+    # }});
+    # }})();
+    # </script>
+    # """, height=48, scrolling=False)
 
     st.markdown("**Target Roles**")
     st.markdown('<p style="font-size:.75rem;color:var(--tx);opacity:.75;margin-top:-6px;margin-bottom:10px">Any profession — Data Analyst, Lawyer, Developer...</p>', unsafe_allow_html=True)
