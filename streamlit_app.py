@@ -133,7 +133,7 @@ section[data-testid="stSidebar"]{{background:var(--bg-2) !important;border-right
 section[data-testid="stSidebar"]>div{{background:transparent !important;padding-top:.3rem !important}}
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{{gap:.6rem !important}}
 /* ── SIDEBAR THEME TOGGLE — hidden real button, visual HTML toggle ── */
-section[data-testid="stSidebar"] .element-container:has(#jh-theme-marker)+.element-container{{height:0 !important;overflow:hidden !important;margin:0 !important;padding:0 !important;pointer-events:none !important;}}
+section[data-testid="stSidebar"] .element-container:has(#jh-theme-marker)+.element-container{{height:0 !important;overflow:hidden !important;margin:0 !important;padding:0 !important;}}
 
 
 # /* ── SIDEBAR RADIO THEME TOGGLE — hidden, JS-driven ── */
@@ -955,17 +955,18 @@ with st.sidebar:
 """, unsafe_allow_html=True)
     # ── Theme toggle ──────────────────────────────────────
     _is_dark = st.session_state.jh_theme == "dark"
-    _pill_bg = "#F0C040"                    if _is_dark else "rgba(237,233,224,.18)"
-    _pill_bd = "rgba(240,192,64,.55)"       if _is_dark else "rgba(237,233,224,.22)"
-    _knob_bg = "#080808"                    if _is_dark else "#EDE9E0"
-    _knob_l  = "28px"                       if _is_dark else "3px"
-    _tx_col  = "rgba(237,233,224,.62)"      if _is_dark else "rgba(12,12,10,.55)"
-    _icon    = "🌙"                         if _is_dark else "☀️"
-    _lbl     = "Dark"                       if _is_dark else "Light"
-    # JS finds the hidden button (empty innerText) and clicks it → in-place rerun, no navigation
-    _js = "(function(){var doc=document;try{if(window.parent&&window.parent.document)doc=window.parent.document;}catch(e){}var btns=doc.querySelectorAll('section[data-testid=\"stSidebar\"] button');for(var i=0;i<btns.length;i++){if(!btns[i].innerText.trim()){btns[i].click();return;}}})();"
+    _pill_bg = "#F0C040"               if _is_dark else "rgba(237,233,224,.18)"
+    _pill_bd = "rgba(240,192,64,.55)"  if _is_dark else "rgba(237,233,224,.22)"
+    _knob_bg = "#080808"               if _is_dark else "#EDE9E0"
+    _knob_l  = "28px"                  if _is_dark else "3px"
+    _tx_col  = "rgba(237,233,224,.62)" if _is_dark else "rgba(12,12,10,.55)"
+    _icon    = "🌙"                    if _is_dark else "☀️"
+    _lbl     = "Dark"                  if _is_dark else "Light"
+    # Regular string (not f-string) so { } are literal — safe to embed in onclick="..."
+    # Uses only single quotes inside so no conflict with the outer onclick double-quote attribute
+    _js = "var b=document.querySelectorAll('button');for(var i=0;i<b.length;i++){if(b[i].innerText.trim()==='JH_TOG'){b[i].click();return;}}"
     st.markdown(f"""
-<div style="display:flex;justify-content:center;margin:14px 0 4px;cursor:pointer;" onclick="{_js}">
+<div onclick="{_js}" style="display:flex;justify-content:center;margin:14px 0 4px;cursor:pointer;">
   <span style="display:inline-flex;align-items:center;gap:13px;
                font-family:'DM Mono',monospace;font-size:1.08rem;font-weight:500;
                color:{_tx_col};letter-spacing:.02em;user-select:none;">
@@ -981,8 +982,8 @@ with st.sidebar:
 </div>
 <span id="jh-theme-marker" style="display:none"></span>
 """, unsafe_allow_html=True)
-    # Real hidden button — CSS hides it via the #jh-theme-marker sibling rule above
-    if st.button("\u200b", key="jh_theme_btn"):
+    # Hidden real button — JS finds it by label "JH_TOG", CSS collapses its container
+    if st.button("JH_TOG", key="jh_theme_btn"):
         st.session_state.jh_theme = "light" if _is_dark else "dark"
         st.rerun()
 
