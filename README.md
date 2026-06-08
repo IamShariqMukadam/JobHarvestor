@@ -7,9 +7,8 @@
 
 <br/>
 
-<!-- Live Demo & Repo -->
-[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-JobHarvestor-F0C040?style=for-the-badge&labelColor=080808)](https://jobharvestor.streamlit.app)
-[![GitHub](https://img.shields.io/badge/GitHub-IamShariqMukadam-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/IamShariqMukadam/jobharvestor)
+<!-- Live Demo -->
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Click_to_see_it_in_action_→-F0C040?style=for-the-badge&labelColor=080808)](https://jobharvestor.streamlit.app)
 
 <br/>
 
@@ -26,40 +25,38 @@
 <br/>
 
 
-</div>
 
 ---
 
 > **70% of AI role JDs are inconsistent** — candidates spend 6–12 months learning wrong skills. JobHarvestor scrapes real postings across LinkedIn, Naukri and Internshala, extracts structured skill data via a Groq LLM pipeline, and clusters them by company tier (FAANG / Startup / Mid-market) to show you exactly what matters vs what's boilerplate filler — with a personalized readiness score and ranked learning roadmap.
 
+</div>
+
 ---
 
 ## 📸 Preview
 
-> **Add screenshots here** — replace the placeholders below with actual screenshots of your Streamlit app.
-
-<!-- Agent Console -->
-<img src="docs/screenshots/1.png.png" alt="Agent Console — conversational market analysis" width="100%"/>
-<img src="docs/screenshots/2.png.png" alt="Agent Console — conversational market analysis" width="100%"/>
+<!-- Agent Console — full-width hero -->
+<img src="docs/screenshots/1.png" alt="Agent Console — Dark Mode" width="100%"/>
+<img src="docs/screenshots/2.png" alt="Agent Console — Light Mode" width="100%"/>
 
 <br/>
 
+<!-- 3-tab grid -->
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/4.png" alt="Skill Signals tab" width="100%"/></td>
-    <td width="50%"><img src="docs/screenshots/5.png" alt="Market Map cluster scatter" width="100%"/></td>
-  </tr>
-  <tr>
-    <td align="center"><sub><b>Skill Signals</b> — top-N skills by % frequency in JDs</sub></td>
-    <td align="center"><sub><b>Market Map</b> — PCA scatter of 600+ jobs by skill similarity</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/screenshots/6.png" alt="Job Pipeline tracker" width="100%"/></td>
-    <td width="50%"><img src="docs/screenshots/gap_analysis.png" alt="Gap analysis chart" width="100%"/></td>
-  </tr>
-  <tr>
-    <td align="center"><sub><b>Job Pipeline</b> — application tracker with status management</sub></td>
-    <td align="center"><sub><b>Gap Analysis</b> — readiness score + prioritized learning roadmap</sub></td>
+    <td width="33%">
+      <img src="docs/screenshots/4.png" alt="Skill Signals" width="100%"/>
+      <p align="center"><sub><b>Skill Signals</b> — top-N skills ranked by % frequency in JDs</sub></p>
+    </td>
+    <td width="33%">
+      <img src="docs/screenshots/5.png" alt="Market Map" width="100%"/>
+      <p align="center"><sub><b>Market Map</b> — PCA scatter of jobs by skill similarity</sub></p>
+    </td>
+    <td width="33%">
+      <img src="docs/screenshots/6.png" alt="Job Pipeline" width="100%"/>
+      <p align="center"><sub><b>Job Pipeline</b> — application tracker with match scoring</sub></p>
+    </td>
   </tr>
 </table>
 
@@ -84,18 +81,19 @@ Most job boards show you listings. JobHarvestor tells you what the market **actu
 
 ```
 main.py          →  Scrape: LinkedIn · Naukri · Internshala  →  data/JobHarvestor.csv
+                    Sequential by default; concurrent (ThreadPoolExecutor) when jobs/platform < 50
 main2.py         →  Visit each job URL, extract full JD text
                     Groq LLM: required_skills[], nice_to_have[], experience, salary
-                    ThreadPoolExecutor (concurrent) + dual-key rate limiting
-                    →  JobHarvestor.xlsx (4 sheets)
+                    ThreadPoolExecutor for LinkedIn + Internshala · Naukri sequential (shared browser)
+                    Dual-key rotation + rate limiting → JobHarvestor.xlsx (4 sheets)
 main3.py         →  sentence-transformers embeddings  (all-MiniLM-L6-v2)
-                    K-Means clustering  (K=3 market tiers)
-                    PCA → 2D scatter coordinates
+                    K-Means clustering  (K=3 market tiers) · PCA → 2D scatter coordinates
+                    Per-cluster skill frequency + relative tier differentiation
                     →  cluster_report.json
-main4.py         →  Ground truth profiles per cluster
+main4.py         →  Ground truth profiles per cluster (required ≥40% · useful 20–40%)
                     Gap analysis against your skills
                     →  ground_truth_profiles.json · my_gap_report.json
-streamlit_app.py →  4-tab dashboard + LangGraph conversational agent
+streamlit_app.py →  4-tab dashboard + LangGraph StateGraph conversational agent
 api/main.py      →  FastAPI REST API
 ```
 
