@@ -190,15 +190,16 @@ def extract_role_from_message(text: str) -> str | None:
 
 # ── Greeting ──────────────────────────────────────────────────────────────────
 GREETING = (
-    "👋 Hi! I'm **JobHarvestor**, your AI job market intelligence agent.\n\n"
-    "I analyze real job postings scraped from LinkedIn, Naukri, and Internshala "
+    "👋 Hi! I'm <span style='color:#F0C040'>**JobHarvestor**</span>, your AI job market intelligence agent.\n\n"
+    "I analyze real job postings scraped from <span style='color:#F0C040'>**LinkedIn**</span>, "
+    "<span style='color:#F0C040'>**Naukri**</span>, and <span style='color:#F0C040'>**Internshala**</span> "
     "to tell you exactly what the market demands — with real percentages, not guesses.\n\n"
     "Here's what I can do:\n"
-    "• Find jobs for **any role** in your local market\n"
-    "• Show you the **top skills** with their % frequency in JDs\n"
-    "• Give you a **readiness score** vs what the market requires\n"
+    "• Find jobs for <span style='color:#F0C040'>**any role**</span> in your local market\n"
+    "• Show you the <span style='color:#F0C040'>**top skills**</span> with their % frequency in JDs\n"
+    "• Show you **what you know vs what the market requires**\n"
     "• Build a **ranked learning roadmap** based on your skill gaps\n\n"
-    "**What role are you looking to explore, and which city?**\n"
+    "**What <span style='color:#F0C040'>role</span> are you looking to explore, and which <span style='color:#F0C040'>city</span>?**\n"
     "*(e.g. \"Data Analyst in Pune\", \"Flutter Developer in Bangalore\", "
     "\"ML Engineer remote\" — any role + location works)*"
 )
