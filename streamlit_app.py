@@ -110,8 +110,8 @@ stc.html(f"""<script>
     try {{
       var doc = window.parent.document;
       doc.querySelectorAll('[data-testid="stFileUploadDropzone"]').forEach(function(el) {{
-        el.style.setProperty('background', bg, 'important');
-        el.style.setProperty('background-color', bg, 'important');
+        el.setAttribute('style', el.getAttribute('style') || '');
+        el.style.cssText += ';background:' + bg + ' !important;background-color:' + bg + ' !important;';
         el.style.setProperty('border-color', 'rgba(128,128,128,0.3)', 'important');
         el.querySelectorAll('div, section, span, p, small').forEach(function(child) {{
           child.style.setProperty('background', bg, 'important');
