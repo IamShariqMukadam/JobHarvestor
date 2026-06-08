@@ -1468,15 +1468,22 @@ with tab1:
         st.cache_data.clear()
 
         _role = st.session_state.pop("bg_scrape_role", "the role")
+        _done_msg = (
+            f"Fresh data is ready. I scraped and processed **{_role}** job listings.\n\n"
+            f"Shall I run the full skill frequency analysis and gap report?"
+        )
 
-        st.session_state.chat_msgs.append({
-            "role": "assistant",
-            "content": (
-                f"Fresh data is ready. I scraped and processed **{_role}** job listings.\n\n"
-                f"Shall I run the full skill frequency analysis and gap report?"
-            ),
-        })
+        st.session_state.chat_msgs.append({"role": "assistant", "content": _done_msg})
 
+        # Inject into LangGraph thread so agent has context when user replies
+        try:
+            from agent.graph import _get_graph
+            from langchain_core.messages import AIMessage
+            _g = _get_graph()
+            _cfg = {"configurable": {"thread_id": st.session_state.get("agent_thread_id", "default")}}
+            _g.update_state(_cfg, {"messages": [AIMessage(content=_done_msg)]})
+        except Exception:
+            pass
     scraping_active = os.path.exists(_BG_RUNNING)
     col_chat, col_info = st.columns([3, 1], gap="large")
 
