@@ -642,16 +642,16 @@ div[data-testid="stFileUploadDropzone"] > div,
 div[data-testid="stFileUploadDropzone"] > div > div,
 div[data-testid="stFileUploadDropzone"] > div > div > div,
 div[data-testid="stFileUploadDropzone"] section {{
-  background: var(--inp-bg) !important;
-  background-color: var(--inp-bg) !important;
+  background: {_dropzone_bg} !important;
+  background-color: {_dropzone_bg} !important;
 }}
 [data-testid="stFileUploadDropzone"],
 [data-testid="stFileUploadDropzone"]>div,
 [data-testid="stFileUploadDropzone"]>div>div,
 [data-testid="stFileUploadDropzone"] section,
 [data-testid="stFileUploadDropzone"] [data-testid="stFileUploadDropzoneInner"]{{
-  background:var(--inp-bg) !important;
-  background-color:var(--inp-bg) !important;
+  background:{_dropzone_bg} !important;
+  background-color:{_dropzone_bg} !important;
   border-color:var(--bd-s) !important;
   border-radius:var(--r) !important;
   color:var(--tx) !important;
@@ -663,9 +663,11 @@ div[data-testid="stFileUploadDropzone"] section {{
   background:var(--panel-s) !important;border:1px solid var(--bd-s) !important;
   color:var(--tx) !important;border-radius:999px !important;font-weight:600 !important;
 }}
-section[data-testid="stExpander"] [data-testid="stFileUploader"] *,
-section[data-testid="stExpander"] [data-testid="stFileUploadDropzone"] *{{
-  background:var(--inp-bg) !important;
+section[data-testid="stExpander"] [data-testid="stFileUploadDropzone"],
+section[data-testid="stExpander"] [data-testid="stFileUploadDropzone"]>div,
+section[data-testid="stExpander"] [data-testid="stFileUploadDropzone"] section{{
+  background:{_dropzone_bg} !important;
+  background-color:{_dropzone_bg} !important;
 }}
 
 @media(max-width:900px){{
