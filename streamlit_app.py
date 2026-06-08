@@ -588,8 +588,8 @@ BEFORE (lines 24–28):
 .rank-num{{font-family:var(--f-mono);font-size:.82rem;color:var(--accent) !important;font-weight:500}}
 
 /* ── PROGRESS ── */
-[data-testid="stProgress"]>div>div{{background:var(--accent) !important;border-radius:999px !important}}
-[data-testid="stProgress"]>div{{background:var(--bd) !important;border-radius:999px !important;height:3px !important}}
+[data-testid="stProgress"]>div>div{{background:#4ADE80 !important;border-radius:999px !important}}
+[data-testid="stProgress"]>div{{background:var(--accent) !important;border-radius:999px !important;height:3px !important}}
 
 /* ── CHECKBOX ── */
 [data-testid="stCheckbox"] label{{color:var(--tx) !important;font-weight:500 !important}}
@@ -1231,7 +1231,7 @@ if scrape_btn and st.session_state.custom_roles:
 
     for cmd, label, p_start, p_end in STEPS:
         progress.progress(p_start)
-        progress_text.markdown(f'<span style="font-family:var(--f-mono);font-size:.8rem;color:var(--accent)">{p_start}% ▸ {label}...</span>', unsafe_allow_html=True)
+        progress_text.markdown(f'<span style="font-family:var(--f-mono);font-size:.8rem;color:#4ADE80">{p_start}% ▸ {label}...</span>', unsafe_allow_html=True)
 
         with st.expander(label, expanded=True):
             out_container = st.empty()
