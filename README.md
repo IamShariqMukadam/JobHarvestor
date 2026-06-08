@@ -2,16 +2,35 @@
 
 # 🎯 JobHarvestor
 
-**AI-powered job market intelligence — real skill frequencies from live JDs, not guesses.**
+### AI-powered job market intelligence
+**Scrapes 600+ live JDs · Extracts skills via LLM · Clusters by company tier · Scores your readiness**
 
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io)
-[![Groq](https://img.shields.io/badge/Groq-LLM_Extraction-F55036?style=flat-square)](https://groq.com)
-[![LangChain](https://img.shields.io/badge/LangChain-Agent-1C3C3C?style=flat-square&logo=langchain&logoColor=white)](https://langchain.com)
-[![FastAPI](https://img.shields.io/badge/FastAPI-REST_API-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+<br/>
+
+<!-- Live Demo & Repo -->
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-JobHarvestor-F0C040?style=for-the-badge&labelColor=080808)](https://jobharvestor.streamlit.app)
+[![GitHub](https://img.shields.io/badge/GitHub-IamShariqMukadam-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/IamShariqMukadam/jobharvestor)
+
+<br/>
+
+<!-- Stack badges -->
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](#)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](#)
+[![Groq](https://img.shields.io/badge/Groq-LLM_Extraction-F55036?style=flat-square)](#)
+[![LangGraph](https://img.shields.io/badge/LangGraph-ReAct_Agent-1C3C3C?style=flat-square&logo=langchain&logoColor=white)](#)
+[![FastAPI](https://img.shields.io/badge/FastAPI-REST_API-009688?style=flat-square&logo=fastapi&logoColor=white)](#)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-K--Means-F7931E?style=flat-square&logo=scikit-learn&logoColor=white)](#)
+[![Selenium](https://img.shields.io/badge/Selenium-Scraping-43B02A?style=flat-square&logo=selenium&logoColor=white)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-F0C040?style=flat-square)](#)
+
+<br/>
+
 
 </div>
+
+---
+
+> **70% of AI role JDs are inconsistent** — candidates spend 6–12 months learning wrong skills. JobHarvestor scrapes real postings across LinkedIn, Naukri and Internshala, extracts structured skill data via a Groq LLM pipeline, and clusters them by company tier (FAANG / Startup / Mid-market) to show you exactly what matters vs what's boilerplate filler — with a personalized readiness score and ranked learning roadmap.
 
 ---
 
@@ -20,21 +39,22 @@
 > **Add screenshots here** — replace the placeholders below with actual screenshots of your Streamlit app.
 
 <!-- Agent Console -->
-<img src="docs/screenshots/agent_console.png" alt="Agent Console — conversational market analysis" width="100%"/>
+<img src="docs/screenshots/1.png.png" alt="Agent Console — conversational market analysis" width="100%"/>
+<img src="docs/screenshots/2.png.png" alt="Agent Console — conversational market analysis" width="100%"/>
 
 <br/>
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/skill_signals.png" alt="Skill Signals tab" width="100%"/></td>
-    <td width="50%"><img src="docs/screenshots/market_map.png" alt="Market Map cluster scatter" width="100%"/></td>
+    <td width="50%"><img src="docs/screenshots/4.png" alt="Skill Signals tab" width="100%"/></td>
+    <td width="50%"><img src="docs/screenshots/5.png" alt="Market Map cluster scatter" width="100%"/></td>
   </tr>
   <tr>
     <td align="center"><sub><b>Skill Signals</b> — top-N skills by % frequency in JDs</sub></td>
     <td align="center"><sub><b>Market Map</b> — PCA scatter of 600+ jobs by skill similarity</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/job_pipeline.png" alt="Job Pipeline tracker" width="100%"/></td>
+    <td width="50%"><img src="docs/screenshots/6.png" alt="Job Pipeline tracker" width="100%"/></td>
     <td width="50%"><img src="docs/screenshots/gap_analysis.png" alt="Gap analysis chart" width="100%"/></td>
   </tr>
   <tr>
