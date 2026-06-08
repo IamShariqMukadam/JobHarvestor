@@ -99,7 +99,25 @@ else:
     _plot_bg = "rgba(10,10,10,.84)"
     _plot_tx = "#ffffff"
     _plot_grid = "rgba(255,255,255,.10)"
-
+    
+_dropzone_bg = "#FFFFFF" if _IS_LIGHT else "#0D0D0D"
+stc.html(f"""<script>
+(function() {{
+  var bg = '{_dropzone_bg}';
+  function fixDropzone() {{
+    try {{
+      var doc = window.parent.document;
+      doc.querySelectorAll('[data-testid="stFileUploadDropzone"]').forEach(function(el) {{
+        el.style.setProperty('background', bg, 'important');
+        el.style.setProperty('background-color', bg, 'important');
+        el.style.setProperty('border-color', 'rgba(128,128,128,0.3)', 'important');
+      }});
+    }} catch(e) {{}}
+  }}
+  fixDropzone();
+  setInterval(fixDropzone, 600);
+}})();
+</script>""", height=0, scrolling=False)
 
 st.markdown(f"""
 <style>
