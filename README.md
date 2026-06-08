@@ -34,22 +34,22 @@
 
 <table>
   <tr>
-    <td width="50%" valign="bottom">
-      <img src="docs/screenshots/3.png" alt="Agent Console" width="100%"/>
+    <td width="50%">
+      <img src="docs/screenshots/3.png" alt="Agent Console" width="100%" height="380"/>
       <p align="center"><sub><b>Agent Console</b> — conversational agent with which you can scrape+analyze</sub></p>
     </td>
-    <td width="50%" valign="bottom">
-      <img src="docs/screenshots/4.png" alt="Skill Signals" width="100%"/>
+    <td width="50%">
+      <img src="docs/screenshots/4.png" alt="Skill Signals" width="100%" height="380"/>
       <p align="center"><sub><b>Skill Signals</b> — top-N skills ranked by % frequency in JDs</sub></p>
     </td>
   </tr>
   <tr>
-    <td width="50%" valign="bottom">
-      <img src="docs/screenshots/5.png" alt="Market Map" width="100%"/>
+    <td width="50%">
+      <img src="docs/screenshots/5.png" alt="Market Map" width="100%" height="380"/>
       <p align="center"><sub><b>Market Map</b> — PCA scatter of jobs by skill similarity</sub></p>
     </td>
-    <td width="50%" valign="bottom">
-      <img src="docs/screenshots/6.png" alt="Job Pipeline" width="100%"/>
+    <td width="50%">
+      <img src="docs/screenshots/6.png" alt="Job Pipeline" width="100%" height="380"/>
       <p align="center"><sub><b>Job Pipeline</b> — application tracker with match scoring</sub></p>
     </td>
   </tr>
@@ -272,17 +272,41 @@ POST /analyze
 
 ## 🧩 Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Scraping | Selenium, `undetected-chromedriver`, BeautifulSoup4, requests |
-| LLM Extraction | Groq API (`llama-3.1-8b-instant`), dual-key rotation |
-| Embeddings | `sentence-transformers` (`all-MiniLM-L6-v2`) |
-| Clustering | `scikit-learn` KMeans + PCA |
-| Agent | LangGraph StateGraph, LangChain tools, `ChatGroq`, `MemorySaver` |
-| UI | Streamlit, Plotly |
-| API | FastAPI, Pydantic |
-| Data | pandas, openpyxl |
-| Pipeline IPC | file-based flags, `subprocess`, per-user session isolation |
+**Scraping**
+
+![Selenium](https://img.shields.io/badge/Selenium-43B02A?style=for-the-badge&logo=selenium&logoColor=white)
+![BeautifulSoup4](https://img.shields.io/badge/BeautifulSoup4-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Requests](https://img.shields.io/badge/Requests-2CA5E0?style=for-the-badge&logo=python&logoColor=white)
+![undetected--chromedriver](https://img.shields.io/badge/undetected--chromedriver-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
+
+**LLM Extraction**
+
+![Groq](https://img.shields.io/badge/Groq-F55036?style=for-the-badge&logoColor=white)
+![LLaMA 3.1](https://img.shields.io/badge/LLaMA_3.1_8B-412991?style=for-the-badge&logo=meta&logoColor=white)
+
+**Embeddings & Clustering**
+
+![sentence--transformers](https://img.shields.io/badge/sentence--transformers-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
+
+**Agent**
+
+![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
+![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
+![ChatGroq](https://img.shields.io/badge/ChatGroq-F55036?style=for-the-badge&logoColor=white)
+
+**UI & API**
+
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
+![Plotly](https://img.shields.io/badge/Plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white)
+
+**Data**
+
+![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
+![openpyxl](https://img.shields.io/badge/openpyxl-217346?style=for-the-badge&logo=microsoftexcel&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
 ---
 
