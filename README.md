@@ -12,19 +12,6 @@
 
 <br/>
 
-<!-- Stack badges -->
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](#)
-[![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](#)
-[![Groq](https://img.shields.io/badge/Groq-LLM_Extraction-F55036?style=flat-square)](#)
-[![LangGraph](https://img.shields.io/badge/LangGraph-ReAct_Agent-1C3C3C?style=flat-square&logo=langchain&logoColor=white)](#)
-[![FastAPI](https://img.shields.io/badge/FastAPI-REST_API-009688?style=flat-square&logo=fastapi&logoColor=white)](#)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-K--Means-F7931E?style=flat-square&logo=scikit-learn&logoColor=white)](#)
-[![Selenium](https://img.shields.io/badge/Selenium-Scraping-43B02A?style=flat-square&logo=selenium&logoColor=white)](#)
-[![License: MIT](https://img.shields.io/badge/License-MIT-F0C040?style=flat-square)](#)
-
-<br/>
-
-
 
 ---
 
@@ -45,15 +32,21 @@
 <!-- 3-tab grid -->
 <table>
   <tr>
-    <td width="33%">
+    <td width="50%">
+      <img src="docs/screenshots/7.png" alt="Agent Console" width="100%"/>
+      <p align="center"><sub><b>Agent Console</b> — conversational agent with which you can scrape+analyze</sub></p>
+    </td>
+    <td width="50%">
       <img src="docs/screenshots/4.png" alt="Skill Signals" width="100%"/>
       <p align="center"><sub><b>Skill Signals</b> — top-N skills ranked by % frequency in JDs</sub></p>
     </td>
-    <td width="33%">
+  </tr>
+  <tr>
+    <td width="50%">
       <img src="docs/screenshots/5.png" alt="Market Map" width="100%"/>
       <p align="center"><sub><b>Market Map</b> — PCA scatter of jobs by skill similarity</sub></p>
     </td>
-    <td width="33%">
+    <td width="50%">
       <img src="docs/screenshots/6.png" alt="Job Pipeline" width="100%"/>
       <p align="center"><sub><b>Job Pipeline</b> — application tracker with match scoring</sub></p>
     </td>
