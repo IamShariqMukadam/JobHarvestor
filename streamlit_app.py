@@ -101,9 +101,11 @@ else:
     _plot_grid = "rgba(255,255,255,.10)"
 
 _dropzone_bg = "#FFFFFF" if _IS_LIGHT else "#0D0D0D"
+_dropzone_tx = "#0C0C0A" if _IS_LIGHT else "#EDE9E0"
 stc.html(f"""<script>
 (function() {{
   var bg = '{_dropzone_bg}';
+  var tx = '{_dropzone_tx}';
   function fixDropzone() {{
     try {{
       var doc = window.parent.document;
@@ -111,11 +113,19 @@ stc.html(f"""<script>
         el.style.setProperty('background', bg, 'important');
         el.style.setProperty('background-color', bg, 'important');
         el.style.setProperty('border-color', 'rgba(128,128,128,0.3)', 'important');
+        el.querySelectorAll('div, section, span, p, small').forEach(function(child) {{
+          child.style.setProperty('background', bg, 'important');
+          child.style.setProperty('background-color', bg, 'important');
+          child.style.setProperty('color', tx, 'important');
+        }});
+        el.querySelectorAll('svg, path').forEach(function(child) {{
+          child.style.setProperty('fill', tx, 'important');
+        }});
       }});
     }} catch(e) {{}}
   }}
   fixDropzone();
-  setInterval(fixDropzone, 600);
+  setInterval(fixDropzone, 300);
 }})();
 </script>""", height=0, scrolling=False)
 
@@ -655,7 +665,8 @@ div[data-testid="stFileUploadDropzone"] section {{
   border-radius:var(--r) !important;
   color:var(--tx) !important;
 }}
-[data-testid="stFileUploaderDropzoneInstructions"] *{{color:var(--tx-m) !important}}
+[data-testid="stFileUploaderDropzoneInstructions"],
+[data-testid="stFileUploaderDropzoneInstructions"] *{{color:var(--tx) !important;background:{_dropzone_bg} !important}}
 [data-testid="stFileUploadDropzone"] button,
 [data-testid="stFileUploader"] button,
 [data-testid="stFileUploader"] section button{{
