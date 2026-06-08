@@ -588,8 +588,8 @@ BEFORE (lines 24–28):
 .rank-num{{font-family:var(--f-mono);font-size:.82rem;color:var(--accent) !important;font-weight:500}}
 
 /* ── PROGRESS ── */
-[data-testid="stProgress"]>div>div{{background:#4ADE80 !important;border-radius:999px !important}}
-[data-testid="stProgress"]>div{{background:var(--accent) !important;border-radius:999px !important;height:3px !important}}
+[data-testid="stProgress"]>div>div{{background:var(--accent) !important;border-radius:999px !important}}
+[data-testid="stProgress"]>div{{background:#4ADE80 !important;border-radius:999px !important;height:3px !important}}
 
 /* ── CHECKBOX ── */
 [data-testid="stCheckbox"] label{{color:var(--tx) !important;font-weight:500 !important}}
