@@ -99,7 +99,7 @@ else:
     _plot_bg = "rgba(10,10,10,.84)"
     _plot_tx = "#ffffff"
     _plot_grid = "rgba(255,255,255,.10)"
-    
+
 _dropzone_bg = "#FFFFFF" if _IS_LIGHT else "#0D0D0D"
 stc.html(f"""<script>
 (function() {{
@@ -637,9 +637,14 @@ div[role="listbox"],div[role="listbox"]>div{{
 }}
 
 /* File uploader */
-[data-testid="stFileUploader"],
-[data-testid="stFileUploader"]>div,
-[data-testid="stFileUploader"]>div>div,
+div[data-testid="stFileUploadDropzone"],
+div[data-testid="stFileUploadDropzone"] > div,
+div[data-testid="stFileUploadDropzone"] > div > div,
+div[data-testid="stFileUploadDropzone"] > div > div > div,
+div[data-testid="stFileUploadDropzone"] section {{
+  background: var(--inp-bg) !important;
+  background-color: var(--inp-bg) !important;
+}}
 [data-testid="stFileUploadDropzone"],
 [data-testid="stFileUploadDropzone"]>div,
 [data-testid="stFileUploadDropzone"]>div>div,
