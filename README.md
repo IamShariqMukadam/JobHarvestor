@@ -25,28 +25,30 @@
 
 <!-- Agent Console — full-width hero -->
 <img src="docs/screenshots/1.png" alt="Agent Console — Dark Mode" width="100%"/>
+
+---
+
 <img src="docs/screenshots/2.png" alt="Agent Console — Light Mode" width="100%"/>
 
 <br/>
 
-<!-- 3-tab grid -->
 <table>
   <tr>
-    <td width="50%">
-      <img src="docs/screenshots/7.png" alt="Agent Console" width="100%"/>
+    <td width="50%" valign="bottom">
+      <img src="docs/screenshots/3.png" alt="Agent Console" width="100%"/>
       <p align="center"><sub><b>Agent Console</b> — conversational agent with which you can scrape+analyze</sub></p>
     </td>
-    <td width="50%">
+    <td width="50%" valign="bottom">
       <img src="docs/screenshots/4.png" alt="Skill Signals" width="100%"/>
       <p align="center"><sub><b>Skill Signals</b> — top-N skills ranked by % frequency in JDs</sub></p>
     </td>
   </tr>
   <tr>
-    <td width="50%">
+    <td width="50%" valign="bottom">
       <img src="docs/screenshots/5.png" alt="Market Map" width="100%"/>
       <p align="center"><sub><b>Market Map</b> — PCA scatter of jobs by skill similarity</sub></p>
     </td>
-    <td width="50%">
+    <td width="50%" valign="bottom">
       <img src="docs/screenshots/6.png" alt="Job Pipeline" width="100%"/>
       <p align="center"><sub><b>Job Pipeline</b> — application tracker with match scoring</sub></p>
     </td>
