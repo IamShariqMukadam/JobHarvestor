@@ -15,7 +15,7 @@
 
 ---
 
-> **70% of AI role JDs are inconsistent** — candidates spend 6–12 months learning wrong skills. JobHarvestor scrapes real postings across LinkedIn, Naukri and Internshala, extracts structured skill data via a Groq LLM pipeline, and clusters them by company tier (FAANG / Startup / Mid-market) to show you exactly what matters vs what's boilerplate filler — with a personalized readiness score and ranked learning roadmap.
+> **70% of AI role JDs are inconsistent** — candidates spend 6–12 months learning wrong skills. JobHarvestor scrapes real postings across LinkedIn, Naukri and Internshala, extracts structured skill data via a Groq LLM pipeline, and clusters them by company tier (FAANG / Startup / Mid-market) to show you exactly what matters vs what's boilerplate filler — with a personalized readiness score and ranked learning roadmap. >
 
 </div>
 
