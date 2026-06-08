@@ -3,7 +3,7 @@
 # 🎯 JobHarvestor
 
 ### AI-powered job market intelligence
-**Scrapes 600+ live JDs · Extracts skills via LLM · Clusters by company tier · Scores your readiness**
+**Scrapes 300 live JDs · Extracts skills via LLM · Clusters by company tier · Scores your readiness**
 
 <br/>
 
