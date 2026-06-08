@@ -1666,7 +1666,7 @@ with tab1:
 
             for msg in st.session_state.chat_msgs:
                 with st.chat_message(msg["role"]):
-                    st.markdown(msg["content"])
+                    st.markdown(msg["content"], unsafe_allow_html=True)
 
             st.markdown(f"""
 <div class="scrape-card-outer">
@@ -1715,7 +1715,7 @@ with tab1:
         else:
             for msg in st.session_state.chat_msgs:
                 with st.chat_message(msg["role"]):
-                    st.markdown(msg["content"])
+                    st.markdown(msg["content"], unsafe_allow_html=True)
 
             _scroll_to_bottom()
 
