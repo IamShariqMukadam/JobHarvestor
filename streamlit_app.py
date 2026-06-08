@@ -623,9 +623,15 @@ div[role="listbox"],div[role="listbox"]>div{{
 [data-testid="stFileUploader"]>div,
 [data-testid="stFileUploader"]>div>div,
 [data-testid="stFileUploadDropzone"],
-[data-testid="stFileUploadDropzone"]>div{{
-  background:var(--inp-bg) !important;color:var(--tx) !important;
-  border-color:var(--bd-s) !important;border-radius:var(--r) !important;
+[data-testid="stFileUploadDropzone"]>div,
+[data-testid="stFileUploadDropzone"]>div>div,
+[data-testid="stFileUploadDropzone"] section,
+[data-testid="stFileUploadDropzone"] [data-testid="stFileUploadDropzoneInner"]{{
+  background:var(--inp-bg) !important;
+  background-color:var(--inp-bg) !important;
+  border-color:var(--bd-s) !important;
+  border-radius:var(--r) !important;
+  color:var(--tx) !important;
 }}
 [data-testid="stFileUploaderDropzoneInstructions"] *{{color:var(--tx-m) !important}}
 [data-testid="stFileUploadDropzone"] button,
@@ -777,21 +783,24 @@ stc.html("""<script>
 })();
          
 
-// Fix slider fill color
+
+// AFTER — catches any reddish Streamlit primary color
 (function() {
   function fixSliders() {
     try {
       var doc = window.parent.document;
-      doc.querySelectorAll('[data-testid="stSlider"] [data-baseweb="slider"] div').forEach(function(d) {
-        var c = window.parent.getComputedStyle(d).backgroundColor;
-        if (c === 'rgb(255, 75, 75)') {
-          d.style.cssText += 'background:#F0C040 !important';
+      doc.querySelectorAll('[data-testid="stSlider"] [data-baseweb="slider"] *').forEach(function(d) {
+        var bg = window.parent.getComputedStyle(d).backgroundColor;
+        var m = bg.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (m && parseInt(m[1]) > 180 && parseInt(m[2]) < 100 && parseInt(m[3]) < 100) {
+          d.style.setProperty('background', '#F0C040', 'important');
+          d.style.setProperty('background-color', '#F0C040', 'important');
         }
       });
     } catch(e) {}
   }
   fixSliders();
-  setInterval(fixSliders, 800);
+  setInterval(fixSliders, 400);
 })();
 </script>""", height=0, scrolling=False)
 
