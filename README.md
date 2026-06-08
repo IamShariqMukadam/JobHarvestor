@@ -1,53 +1,288 @@
-# JobHarvestor — Niche Job Market Intelligence Agent
+<div align="center">
 
-> Built an AI agent that crawls 200+ live job postings across LinkedIn, Naukri, 
-> and Internshala via Selenium and BeautifulSoup, passing each through an LLM 
-> extraction layer to output structured skill frequency data in a multi-sheet Excel report.
+# 🎯 JobHarvestor
 
-## Problem
-AI role JDs show 70%+ inconsistency across companies causing candidates to waste 
-6-12 months on wrong skills. JobHarvestor clusters postings by company stage 
-(FAANG/Series-A/Mid-market) producing a heatmap of what actually matters vs JD filler.
+**AI-powered job market intelligence — real skill frequencies from live JDs, not guesses.**
 
-## Solution
-A LangGraph agent that:
-1. Crawls 200+ JDs from LinkedIn, Naukri, Internshala
-2. Extracts structured skills via Groq LLM
-3. Clusters JDs by company tier using sentence-transformers + k-means
-4. Builds ground truth role profiles per tier
-5. Generates personalized skill gap analysis + priority learning list
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io)
+[![Groq](https://img.shields.io/badge/Groq-LLM_Extraction-F55036?style=flat-square)](https://groq.com)
+[![LangChain](https://img.shields.io/badge/LangChain-Agent-1C3C3C?style=flat-square&logo=langchain&logoColor=white)](https://langchain.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-REST_API-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
-## Tech Stack
-`Selenium` `BeautifulSoup4` `Groq LLM` `LangGraph` `sentence-transformers` 
-`scikit-learn` `FastAPI` `Streamlit` `Plotly` `pandas` `openpyxl`
+</div>
 
-## Architecture
-main.py   → scrape jobs (LinkedIn, Naukri, Internshala)
-main2.py  → LLM extract skills from JDs (Groq)
-main3.py  → embeddings + k-means clustering
-main4.py  → ground truth profiles + gap analysis + FastAPI
-streamlit_app.py → LangGraph agent + UI
+---
 
-## Quick Start
+## 📸 Preview
+
+> **Add screenshots here** — replace the placeholders below with actual screenshots of your Streamlit app.
+
+<!-- Agent Console -->
+<img src="docs/screenshots/agent_console.png" alt="Agent Console — conversational market analysis" width="100%"/>
+
+<br/>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/skill_signals.png" alt="Skill Signals tab" width="100%"/></td>
+    <td width="50%"><img src="docs/screenshots/market_map.png" alt="Market Map cluster scatter" width="100%"/></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Skill Signals</b> — top-N skills by % frequency in JDs</sub></td>
+    <td align="center"><sub><b>Market Map</b> — PCA scatter of 600+ jobs by skill similarity</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/job_pipeline.png" alt="Job Pipeline tracker" width="100%"/></td>
+    <td width="50%"><img src="docs/screenshots/gap_analysis.png" alt="Gap analysis chart" width="100%"/></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Job Pipeline</b> — application tracker with status management</sub></td>
+    <td align="center"><sub><b>Gap Analysis</b> — readiness score + prioritized learning roadmap</sub></td>
+  </tr>
+</table>
+
+---
+
+## 🧠 What It Does
+
+Most job boards show you listings. JobHarvestor tells you what the market **actually demands** — with real percentages from scraped JDs, segmented by company tier.
+
+| Capability | Details |
+|---|---|
+| **Multi-platform scraping** | LinkedIn (guest API), Naukri (Selenium + BS4), Internshala (requests + BS4) |
+| **LLM skill extraction** | Full JD text → structured `required_skills`, `nice_to_have`, `experience`, `salary` via Groq |
+| **Market segmentation** | `sentence-transformers` embeddings → K-Means clustering → Tier-1 / Startup / Mid-market |
+| **Gap analysis** | Your skills vs market demand → readiness score (0–100%) + ranked learning roadmap |
+| **Conversational agent** | LangGraph ReAct agent with 4 tools, multi-turn memory, live background scraping |
+| **REST API** | FastAPI with `/analyze`, `/profiles`, `/skills/{tier}` endpoints |
+
+---
+
+## 🏗 Architecture
+
+```
+main.py          →  Scrape: LinkedIn · Naukri · Internshala  →  data/JobHarvestor.csv
+main2.py         →  Visit each job URL, extract full JD text
+                    Groq LLM: required_skills[], nice_to_have[], experience, salary
+                    ThreadPoolExecutor (concurrent) + dual-key rate limiting
+                    →  JobHarvestor.xlsx (4 sheets)
+main3.py         →  sentence-transformers embeddings  (all-MiniLM-L6-v2)
+                    K-Means clustering  (K=3 market tiers)
+                    PCA → 2D scatter coordinates
+                    →  cluster_report.json
+main4.py         →  Ground truth profiles per cluster
+                    Gap analysis against your skills
+                    →  ground_truth_profiles.json · my_gap_report.json
+streamlit_app.py →  4-tab dashboard + LangGraph conversational agent
+api/main.py      →  FastAPI REST API
+```
+
+---
+
+## 🖥 Dashboard — 4 Tabs
+
+**Agent Console** — Conversational market intelligence. Type a role and city; the agent triggers a background pipeline scan, then walks you through skill signals and gap analysis in natural language.
+
+**Skill Signals** — Plotly bar chart of top-N skills ranked by % frequency across all scraped JDs. Filter by role and platform. Export as CSV or XLSX.
+
+**Market Map** — PCA scatter plot where each dot is one job. Similar skill profiles cluster together. Filter by tier, role, or highlight specific companies.
+
+**Job Pipeline** — Full application tracker. Update status per listing (To Apply / Applied / Interview / Rejected / Offer), see your match score against your skills, export to XLSX.
+
+---
+
+## ⚡ Quick Start
+
 ```bash
-# 1. Install
+# 1. Clone and install
+git clone https://github.com/IamShariqMukadam/jobharvestor
+cd jobharvestor
 pip install -r requirements.txt
 
-# 2. Set env vars
-cp .env.example .env  # fill in GROQ_API_KEY, credentials
+# 2. Configure environment
+cp .env.example .env
+# Fill in: GROQ_API_KEY=your_key
+#          GROQ_API_KEY_2=your_second_key   (optional — doubles throughput)
 
-# 3. Run pipeline
-python3 main.py       # scrape
-python3 main2.py      # extract skills
-python3 main3.py      # cluster
-python3 main4.py      # build profiles
+# 3. Run the pipeline
+python3 main.py       # Scrape jobs → CSV
+python3 main2.py      # LLM skill extraction → XLSX
+python3 main3.py      # Embeddings + clustering
+python3 main4.py      # Profiles + gap analysis
 
 # 4. Launch UI
 streamlit run streamlit_app.py
 ```
 
-## Output
-- `data/raw_jobs.csv` — 600+ scraped jobs
-- `data/JobHarvestor.xlsx` — 4-sheet Excel tracker
-- `data/cluster_report.json` — per-tier skill profiles
-- Streamlit dashboard at localhost:8501
+> Everything in steps 3–4 can also be triggered directly from the Streamlit sidebar using the **Scrape Jobs + Analyze** button — no terminal needed.
+
+---
+
+## 🔧 Configuration
+
+Edit `config.py` to set roles, locations, and scrape limits:
+
+```python
+ROLES = [
+    "Data Analyst", "Data Scientist",
+    "AI/ML Engineer", "Machine Learning Engineer",
+]
+
+TARGET_LOCATIONS = ["Pune", "Remote", "Hybrid"]
+
+MAX_JOBS_PER_SEARCH = 50     # per role per platform
+
+GROQ_MODEL = "llama-3.1-8b-instant"    # fast + free tier
+# GROQ_MODEL = "llama-3.3-70b-versatile"  # higher quality
+```
+
+The Streamlit sidebar also supports live role and location configuration without editing any code.
+
+---
+
+## 📁 Project Structure
+
+```
+jobharvestor/
+├── main.py                    # Day 1: Scraping runner
+├── main2.py                   # Day 2: LLM extraction runner
+├── main3.py                   # Day 3: Embeddings + clustering runner
+├── main4.py                   # Day 4: Profiles + gap analysis runner
+├── streamlit_app.py           # Dashboard + agent UI
+├── config.py                  # All configuration
+├── requirements.txt
+├── packages.txt               # System packages (chromium, chromium-driver)
+│
+├── scrapers/
+│   ├── linkedin.py            # Guest API scraper (no login required)
+│   ├── naukri.py              # Selenium + BS4, Selenium fallback
+│   ├── internshala.py         # requests + BS4 (fully static)
+│   └── jd_scraper.py          # Per-platform full JD text extraction
+│
+├── llm/
+│   └── extractor.py           # Groq extraction, dual-key rotation, rate limits
+│
+├── clustering/
+│   ├── embedder.py            # sentence-transformers + disk cache
+│   ├── clusterer.py           # K-Means (K=3) + PCA 2D reduction
+│   └── analyzer.py            # Per-cluster skill frequency + tier labeling
+│
+├── analysis/
+│   ├── gap_analyzer.py        # Readiness score, priority learning list
+│   └── profile_builder.py     # Ground truth profiles from cluster data
+│
+├── agent/
+│   ├── graph.py               # LangGraph StateGraph ReAct agent
+│   ├── tools.py               # 4 agent tools (search, extract, cluster, gap)
+│   └── state.py               # AgentState TypedDict
+│
+├── api/
+│   ├── main.py                # FastAPI app with CORS
+│   └── models.py              # Pydantic request/response models
+│
+└── utils/
+    ├── driver.py              # Selenium WebDriver (auto-detects Chrome version)
+    ├── exporter.py            # CSV + XLSX export with styling
+    ├── humanize.py            # Anti-detection: human scrolls, random delays
+    ├── session_store.py       # JSON-based session persistence
+    └── cookies.py             # Browser cookie save/load utilities
+```
+
+---
+
+## 🤖 Agent Tools
+
+The LangGraph agent has four callable tools that wrap the existing pipeline logic:
+
+| Tool | Purpose |
+|---|---|
+| `search_jobs_tool` | Searches `raw_jobs.csv` for a role + optional tier filter |
+| `extract_skills_tool` | Returns aggregated skill frequency across all JDs for a role |
+| `cluster_analysis_tool` | Returns the ground truth skill profile for a given tier |
+| `gap_analysis_tool` | Compares user skills vs market demand → readiness score + roadmap |
+
+---
+
+## 🌐 REST API
+
+```bash
+# Start server
+uvicorn api.main:app --reload --port 8000
+
+# Explore interactive docs
+open http://localhost:8000/docs
+```
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/health` | GET | Health check + loaded cluster count |
+| `/profiles` | GET | All cluster ground truth profiles |
+| `/skills/{tier}` | GET | Top skills for a given tier |
+| `/analyze` | POST | Full gap analysis for user skills + target tier |
+
+**Example request:**
+```json
+POST /analyze
+{
+  "user_skills": ["Python", "SQL", "Pandas", "Power BI"],
+  "target_tier": "mid-market"
+}
+```
+
+---
+
+## 📊 Output Files
+
+| File | Contents |
+|---|---|
+| `data/JobHarvestor.csv` | All scraped jobs with extracted skills, experience, salary |
+| `data/JobHarvestor.xlsx` | 4-sheet Excel: All Jobs, Platform Breakdown, Skill Frequency, Gap Analysis |
+| `data/cluster_report.json` | Per-cluster skill profiles with % frequency |
+| `data/ground_truth_profiles.json` | Required (≥40%) vs useful (20–40%) skills per tier |
+| `data/my_gap_report.json` | Personalized gap analysis output |
+| `data/embeddings.npy` | Cached JD embeddings (auto-invalidates when job count changes) |
+
+---
+
+## 🛡 Reliability & Rate Limiting
+
+- **Groq extraction** — `@sleep_and_retry` + `@limits(calls=15, period=60)` per key, dual-key rotation via `itertools.cycle`, `Retry-After` header respected on 429 responses
+- **Checkpointing** — saves CSV progress every 25 rows; skips already-processed rows on restart
+- **Background scraping** — file-based IPC (`.bg_running`, `.bg_done`, `.bg_phase`) keeps the UI responsive during long runs
+- **Stop flag** — `scraping_stop.flag` halts scraping mid-run across all three platforms
+- **Deduplication** — URL + Title + Company triple-key dedup at export
+- **Browser detection** — `undetected_chromedriver` with auto-detected Chrome version, human-like scrolling and random delays to avoid bot detection
+
+---
+
+## 🧩 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Scraping | Selenium, `undetected-chromedriver`, BeautifulSoup4, requests |
+| LLM Extraction | Groq API (`llama-3.1-8b-instant`), dual-key rotation |
+| Embeddings | `sentence-transformers` (`all-MiniLM-L6-v2`) |
+| Clustering | `scikit-learn` KMeans + PCA |
+| Agent | LangGraph StateGraph, LangChain tools, `ChatGroq`, `MemorySaver` |
+| UI | Streamlit, Plotly |
+| API | FastAPI, Pydantic |
+| Data | pandas, openpyxl |
+| Pipeline IPC | file-based flags, `subprocess`, per-user session isolation |
+
+---
+
+## 🚀 Deployment Notes
+
+- Set `CHROME_PATH` env var to point to your Chromium binary (defaults to `/usr/bin/chromium`)
+- `packages.txt` installs `chromium` and `chromium-driver` on Streamlit Cloud automatically
+- Each user session gets an isolated `data/sessions/{session_id}/` directory; sessions older than 24 hours are cleaned up automatically
+
+---
+
+<div align="center">
+
+Built with Python · Selenium · Groq · LangGraph · sentence-transformers · Streamlit
+
+</div>
