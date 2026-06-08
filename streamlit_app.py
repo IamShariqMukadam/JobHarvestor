@@ -18,7 +18,9 @@ import uuid
 if "session_id" not in st.session_state:
     st.session_state.session_id = uuid.uuid4().hex[:10]
 
-SESSION_DIR = f"data/sessions/{st.session_state.session_id}"
+SESSION_DIR  = f"data/sessions/{st.session_state.session_id}"
+SESSION_CSV  = os.path.join(SESSION_DIR, "JobHarvestor.csv")
+SESSION_XLSX = os.path.join(SESSION_DIR, "JobHarvestor.xlsx")
 os.makedirs(SESSION_DIR, exist_ok=True)
 os.environ["JH_SESSION_DIR"] = SESSION_DIR   # inherited by all subprocesses
 # ─────────────────────────────────────────────────────
@@ -1106,7 +1108,7 @@ with st.sidebar:
     analyze_btn = st.button(
         "▷  Run Agent Analysis",
         use_container_width=True,
-        disabled=not os.path.exists(CSV_OUTPUT),
+        disabled=not os.path.exists(SESSION_CSV),
     )
 
     st.divider()
@@ -1114,7 +1116,7 @@ with st.sidebar:
 
 
     try:
-        _s = pd.read_csv(CSV_OUTPUT)
+        _s = pd.read_csv(SESSION_CSV)
         st.metric("Jobs", len(_s))
         st.metric("Platforms", _s["Platform"].nunique())
         st.metric("Roles", _s["Role Searched"].nunique())
@@ -1175,7 +1177,7 @@ if scrape_btn and st.session_state.custom_roles:
     import config as _c
 
     if not st.session_state.get("keep_old_data", False):
-        for fp in [_c.CSV_OUTPUT, _c.XLSX_OUTPUT]:
+        for fp in [SESSION_CSV, SESSION_XLSX]:
             if os.path.exists(fp):
                 os.remove(fp)
 
@@ -1323,7 +1325,7 @@ def _start_background_scrape(role, location="India"):
         os.remove(_BG_DONE)
 
     with open(os.path.join(SESSION_DIR, "scrape_config_override.json"), "w") as f:
-        json.dump({"roles": [role], "max_jobs": 30, "locations": [location]}, f)
+        json.dump({"roles": [role], "max_jobs": st.session_state.get("jobs_per_plat", 30), "locations": [location]}, f)
 
     with open(_BG_RUNNING, "w") as f:
         f.write(role)
@@ -1676,6 +1678,8 @@ with tab1:
 
                 if _detected_loc:
                     st.session_state.chat_detected_location = _detected_loc
+                    st.session_state.location = _detected_loc  # sync sidebar field
+                    persist()
 
                 if _detected and not st.session_state.get("chat_detected_location"):
                     st.session_state.chat_pending_role = _detected
@@ -2108,7 +2112,7 @@ with tab4:
                 if up:
                     try:
                         df_up = pd.read_csv(up) if up.name.endswith(".csv") else pd.read_excel(up, sheet_name="All Jobs")
-                        df_up.to_csv(CSV_OUTPUT, index=False)
+                        df_up.to_csv(SESSION_CSV, index=False)
                         load_jobs_df.clear()
                         st.success("Loaded.")
                         st.rerun()
@@ -2217,13 +2221,13 @@ with tab4:
                         changed = True
 
         if changed:
-            df.to_csv(CSV_OUTPUT, index=False)
+            df.to_csv(SESSION_CSV, index=False)
             load_jobs_df.clear()
 
             try:
                 from openpyxl import load_workbook
 
-                wb = load_workbook(XLSX_OUTPUT)
+                wb = load_workbook(SESSION_XLSX)
 
                 if "All Jobs" in wb.sheetnames:
                     ws = wb["All Jobs"]
@@ -2238,7 +2242,7 @@ with tab4:
                             if r[uc - 1].value in us:
                                 r[sc_i - 1].value = us[r[uc - 1].value]
 
-                    wb.save(XLSX_OUTPUT)
+                    wb.save(SESSION_XLSX)
 
             except Exception:
                 pass
