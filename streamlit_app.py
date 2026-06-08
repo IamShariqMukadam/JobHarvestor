@@ -1469,8 +1469,12 @@ with tab1:
 
         _role = st.session_state.pop("bg_scrape_role", "the role")
         _done_msg = (
-            f"Fresh data is ready. I scraped and processed **{_role}** job listings.\n\n"
-            f"Shall I run the full skill frequency analysis and gap report?"
+            f"✅ Scraping + analysis complete for **{_role}** jobs.\n\n"
+            f"Your data is live across all tabs:\n"
+            f"- **Skill Signals** — top skills with % frequency from real JDs\n"
+            f"- **Market Map** — job clusters by tier and skill similarity\n"
+            f"- **Job Pipeline** — all listings, filter by role/platform and track applications\n\n"
+            f"Switch to any tab to explore, or ask me something about the market data."
         )
 
         st.session_state.chat_msgs.append({"role": "assistant", "content": _done_msg})
