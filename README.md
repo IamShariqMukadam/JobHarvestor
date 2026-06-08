@@ -15,9 +15,11 @@
 
 ---
 
-> **70% of AI role JDs are inconsistent** — candidates spend 6–12 months learning wrong skills. JobHarvestor scrapes real postings across LinkedIn, Naukri and Internshala, extracts structured skill data via a Groq LLM pipeline, and clusters them by company tier (FAANG / Startup / Mid-market) to show you exactly what matters vs what's boilerplate filler — with a personalized readiness score and ranked learning roadmap.
->
-> &nbsp;
+<table><tr><td>
+
+**70% of AI role JDs are inconsistent** — candidates spend 6–12 months learning wrong skills. JobHarvestor scrapes real postings across LinkedIn, Naukri and Internshala, extracts structured skill data via a Groq LLM pipeline, and clusters them by company tier (FAANG / Startup / Mid-market) to show you exactly what matters vs what's boilerplate filler — with a personalized readiness score and ranked learning roadmap.
+
+</td></tr></table>
 
 </div>
 
@@ -96,7 +98,7 @@ api/main.py      →  FastAPI REST API
 
 ---
 
-## 🖥 Dashboard — 4 Tabs
+## 🖥 Agent Capabilities — 4 Tabs
 
 **Agent Console** — Conversational market intelligence. Type a role and city; the agent triggers a background pipeline scan, then walks you through skill signals and gap analysis in natural language.
 
