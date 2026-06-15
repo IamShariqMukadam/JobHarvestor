@@ -1491,11 +1491,12 @@ def _detect_location_quick(text):
     return None
 
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Agent Console",
     "Skill Signals",
     "Market Map",
     "Job Pipeline",
+    "🎯 Gap Analyzer",
 ])
 
 
@@ -2309,3 +2310,138 @@ with tab4:
 
     except Exception as e:
         st.error(f"Error: {e}")
+
+# ─── TAB 5 : GAP ANALYZER ────────────────────────────────────────────────────
+with tab5:
+    st.markdown("### 🎯 Skill Gap Analyzer")
+    st.caption("Compare your skills against real scraped market demand — no chat required")
+
+    if not os.path.exists(CSV_OUTPUT):
+        st.warning("No data yet. Add roles and run **Scrape Jobs + Analyze** first.")
+    else:
+        ga_col1, ga_col2 = st.columns([3, 2])
+
+        with ga_col1:
+            ga_skills_raw = st.text_area(
+                "Your Skills (comma-separated)",
+                value=st.session_state.get("skills_input", ""),
+                placeholder="Python, SQL, Power BI, Excel, Tableau...",
+                height=110, key="ga_skills_area"
+            )
+
+        with ga_col2:
+            _role_opts = st.session_state.custom_roles if st.session_state.custom_roles else []
+            if _role_opts:
+                ga_role = st.selectbox("Target Role", _role_opts, key="ga_role_sel")
+            else:
+                ga_role = st.text_input("Target Role", placeholder="e.g. Data Analyst", key="ga_role_txt")
+
+            _tier_opts = ["Mid-market", "Tier-1", "Series A / Startup"]
+            _tier_def  = st.session_state.get("target_tier", "Mid-market")
+            ga_tier = st.selectbox(
+                "Company Tier", _tier_opts,
+                index=_tier_opts.index(_tier_def) if _tier_def in _tier_opts else 0,
+                key="ga_tier_sel"
+            )
+
+        run_gap = st.button("⚡ Analyze My Gap", type="primary", use_container_width=True, key="ga_run_btn")
+
+        if run_gap:
+            _ga_skills = [s.strip() for s in ga_skills_raw.split(",") if s.strip()]
+            if not _ga_skills:
+                st.warning("Enter at least one skill above.")
+            else:
+                try:
+                    _gap = analyze_gap(_ga_skills, ga_tier)
+                    st.session_state["_ga_result"]  = _gap
+                    st.session_state["_ga_skills"]  = _ga_skills
+                    st.session_state["_ga_role"]    = ga_role
+                    st.session_state["_ga_tier"]    = ga_tier
+                except Exception as _ge:
+                    st.error(f"Analysis error: {_ge}")
+
+        _gap_res = st.session_state.get("_ga_result")
+        if _gap_res:
+            _ga_skills  = st.session_state.get("_ga_skills", [])
+            _stored_role = st.session_state.get("_ga_role", "")
+            _stored_tier = st.session_state.get("_ga_tier", "Mid-market")
+
+            r_score  = _gap_res.get("readiness_score", 0)
+            missing  = _gap_res.get("missing_required", [])
+            priority = _gap_res.get("priority_list", [])
+
+            st.markdown("---")
+
+            # ── KPI row ────────────────────────────────────────────
+            k1, k2, k3, k4 = st.columns(4)
+            with k1:
+                _cls = "score-high" if r_score >= 70 else ("score-medium" if r_score >= 40 else "score-low")
+                st.markdown(
+                    f'<div class="{_cls}">{r_score}%</div>'
+                    f'<div style="color:#555;font-size:0.78rem;margin-top:2px">Readiness Score</div>',
+                    unsafe_allow_html=True
+                )
+            with k2:
+                st.metric("Skills Matched", len(_ga_skills) - len(missing))
+            with k3:
+                st.metric("Must Learn", len(missing))
+            with k4:
+                st.metric("Priority Skills", len(priority))
+
+            st.markdown("---")
+
+            # ── Gap bar chart (reuses existing _render_gap_chart) ──
+            _render_gap_chart(_gap_res)
+
+            # ── Missing skills pill row ────────────────────────────
+            if missing:
+                st.markdown("**🔴 Must-Learn Skills**")
+                _pills = " ".join([
+                    f'<span style="display:inline-block;background:rgba(255,68,68,0.12);'
+                    f'color:#ff8080;border:1px solid rgba(255,68,68,0.28);border-radius:6px;'
+                    f'padding:3px 10px;font-size:12px;margin:3px">{s}</span>'
+                    for s in missing
+                ])
+                st.markdown(_pills, unsafe_allow_html=True)
+                st.markdown("")
+
+            # ── You already have ───────────────────────────────────
+            _have = [s for s in _ga_skills if s not in missing]
+            if _have:
+                st.markdown("**✅ Skills You Already Have**")
+                _have_pills = " ".join([
+                    f'<span style="display:inline-block;background:rgba(46,200,100,0.10);'
+                    f'color:#5fff8a;border:1px solid rgba(46,200,100,0.25);border-radius:6px;'
+                    f'padding:3px 10px;font-size:12px;margin:3px">{s}</span>'
+                    for s in _have
+                ])
+                st.markdown(_have_pills, unsafe_allow_html=True)
+                st.markdown("")
+
+            st.markdown("---")
+
+            # ── Download report ────────────────────────────────────
+            st.markdown("""
+<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);
+border-radius:12px;padding:14px 18px;margin-bottom:12px">
+<div style="font-weight:700;font-size:0.9rem;color:#e0e0e0;margin-bottom:4px">
+📄 Full Gap Report — 4-Sheet XLSX
+</div>
+<div style="font-size:0.78rem;color:#555;line-height:1.6">
+Executive Summary · Market Intelligence · Learning Roadmap · Cluster Comparison
+</div>
+</div>""", unsafe_allow_html=True)
+
+            try:
+                from utils.report_generator import generate_gap_report
+                _ga_buf = generate_gap_report(_ga_skills, _stored_tier, _stored_role)
+                st.download_button(
+                    "📥 Download Gap Report (XLSX)",
+                    data=_ga_buf,
+                    file_name=f"JobHarvestor_GapReport_{_stored_role.replace(' ', '_') or 'Analysis'}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    key="ga_dl_final"
+                )
+            except Exception as _re:
+                st.caption(f"Report generation unavailable: {_re}")
